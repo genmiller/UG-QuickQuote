@@ -1,0 +1,3553 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Original Print Quote & Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+        }
+
+        /* フォーム送信用の隠しフレーム */
+        #hidden_iframe {
+            display: none;
+        }
+
+        /* 金額表示のアニメーション用 */
+        .price-transition {
+            transition: all 0.3s ease;
+        }
+
+        /* total-quantity input styling */
+        #total-quantity {
+            background-color: rgba(255, 255, 255, 1);
+            background-clip: unset;
+            -webkit-background-clip: unset;
+        }
+
+        /* input with w-full class styling */
+        input.w-full {
+            background-color: rgba(255, 255, 255, 1);
+        }
+
+        /* silk-location-select styling */
+        select.silk-location-select {
+            background-color: rgba(254, 252, 232, 1);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <header class="mb-8 bg-white p-6 rounded-lg shadow-sm">
+            <div class="grid grid-cols-3 items-center gap-4">
+                <!-- Left spacer for balance -->
+                <div></div>
+
+                <!-- Centered logo -->
+                <div class="flex items-center justify-center">
+                    <img src="images/logo.png" alt="Ultra Graphic Logo" class="h-24">
+                </div>
+
+                <!-- Right side controls -->
+                <div class="flex flex-col gap-3 justify-end items-end">
+                    <div class="relative">
+                        <select id="lang-select" onchange="updateUI()"
+                            class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500">
+                            <option value="ja">🇯🇵 日本語</option>
+                            <option value="en">🇺🇸 English</option>
+                        </select>
+                    </div>
+                    <div class="relative">
+                        <select id="currency-select" onchange="calculateTotal()"
+                            class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500">
+                            <option value="JPY">¥ JPY</option>
+                            <option value="USD">$ USD</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <form id="order-form"
+            action="https://docs.google.com/forms/d/e/1FAIpQLSf2e_zw3U60OME7yPXQ9lkU1wzzJ97j9SeQya_c057PPcHBxQ/formResponse"
+            method="POST" target="hidden_iframe" onsubmit="handleSubmit(event)">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="md:col-span-2 space-y-6">
+                    <!-- Step 1: Category Selection -->
+                    <section class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-green-100 text-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                            <span data-i18n="step1_category">印刷カテゴリを選択</span>
+                        </h2>
+                        <div id="category-bubbles" class="grid grid-cols-2 gap-4">
+                            <!-- Category bubble buttons will be populated here -->
+                        </div>
+                        <input type="hidden" id="category" value="">
+                    </section>
+
+                    <!-- Step 2: Service Selection (shown after category selection) -->
+                    <section id="service-selection-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                            <span data-i18n="step2_service">加工方法を選択</span>
+                        </h2>
+                        <p class="text-sm text-gray-600 mb-4" data-i18n="service_instruction">サービスを選択してください</p>
+                        <div id="service-bubbles" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            <!-- Service bubble buttons will be populated here -->
+                        </div>
+                        <input type="hidden" id="method" name="entry.611854774" value="">
+                    </section>
+                    <section id="design-info-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                            <span data-i18n="step3_design">デザイン情報</span>
+                        </h2>
+                        <div id="color-section" class="mb-4 transition-all duration-300">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="silk_instruction">
+                                プリント位置を選択して、各位置の色数を指定してください</p>
+
+                            <div class="space-y-3" id="silk-locations-list">
+                                <!-- Location items will be added dynamically -->
+                            </div>
+
+                            <button type="button" onclick="addSilkLocation()"
+                                class="mt-3 w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition flex items-center justify-center gap-2">
+                                <span class="material-icons text-xl">add_circle_outline</span>
+                                <span data-i18n="add_location">位置を追加</span>
+                            </button>
+
+                            <div id="silk-design-summary"
+                                class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg hidden">
+                                <div class="text-xs font-semibold text-blue-800 mb-2" data-i18n="design_summary">デザイン概要
+                                </div>
+                                <div id="silk-summary-content" class="text-sm text-blue-900 space-y-1">
+                                    <!-- Summary will be populated dynamically -->
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-gray-500 mt-2" data-i18n="hint_colors">※データ確認後に確定します</p>
+                            <input type="hidden" id="silk-locations-data" name="entry.987654321" value="">
+                            <input type="hidden" id="colors" name="entry.520179124" value="">
+                        </div>
+                        <div id="dtf-section" class="mb-4 transition-all duration-300 hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                data-i18n="label_dtf_size">DTFプリントサイズ</label>
+                            <select id="dtf-size" onchange="calculateTotal(); checkDesignProgress();"
+                                class="w-full border-gray-300 border rounded-md p-3 bg-yellow-50 mb-2">
+                                <option value="standard">30cm x 29cm 以内</option>
+                                <option value="oversize">30cm x 29cm 以上</option>
+                            </select>
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                data-i18n="label_dtf_locations">DTFプリント箇所数</label>
+                            <select id="dtf-locations" onchange="calculateTotal(); checkDesignProgress();"
+                                class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                <option value="1">1 箇所</option>
+                                <option value="2">2 箇所</option>
+                                <option value="3">3 箇所</option>
+                                <option value="4">4 箇所</option>
+                            </select>
+                        </div>
+                        <div id="emb-section" class="mb-4 transition-all duration-300 hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                data-i18n="label_emb_target">刺繍の種類</label>
+                            <select id="emb-target" onchange="calculateTotal(); checkDesignProgress();"
+                                class="w-full border-gray-300 border rounded-md p-3 bg-gray-50 mb-2">
+                                <option value="garment">衣類に刺繍</option>
+                                <option value="patch">ワッペン（パッチ）</option>
+                            </select>
+                            <div class="grid grid-cols-3 gap-2 items-end mb-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1"
+                                        data-i18n="label_emb_width">横サイズ</label>
+                                    <input type="number" id="emb-width" min="0" step="0.1"
+                                        oninput="calculateTotal(); checkDesignProgress();"
+                                        class="w-full border-gray-300 border rounded-md p-2" placeholder="5.0">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1"
+                                        data-i18n="label_emb_height">縦サイズ</label>
+                                    <input type="number" id="emb-height" min="0" step="0.1"
+                                        oninput="calculateTotal(); checkDesignProgress();"
+                                        class="w-full border-gray-300 border rounded-md p-2" placeholder="5.0">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1"
+                                        data-i18n="label_emb_unit">単位</label>
+                                    <select id="emb-unit" onchange="calculateTotal()"
+                                        class="w-full border-gray-300 border rounded-md p-2 bg-gray-50">
+                                        <option value="cm">cm</option>
+                                        <option value="inch">inch</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="emb-patch-options" class="mb-2 hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_emb_patch_option">ワッペン仕上げ</label>
+                                <select id="emb-patch-option" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-2 bg-gray-50">
+                                    <option value="none">なし</option>
+                                    <option value="iron">アイロンシート (+¥100/枚)</option>
+                                    <option value="velcro">ベルクロ (+¥200/枚)</option>
+                                </select>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" data-i18n="hint_emb_size">
+                                ※幅(cm/inch)×高さから自動で刺繍サイズ区分を判定します</p>
+                        </div>
+                        <div id="sublimation-section" class="mb-4 transition-all duration-300 hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2"
+                                data-i18n="label_sublimation_style">スタイルを選択</label>
+                            <input type="hidden" id="sublimation-style" value="">
+                            <div id="sublimation-styles" class="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto p-1">
+                                <!-- Styles populated by JS -->
+                            </div>
+                        </div>
+
+                        <div id="sticker-section" class="mb-4 transition-all duration-300 hidden">
+                            <!-- Shape Selection -->
+                            <label class="block text-sm font-medium text-gray-700 mb-1"
+                                data-i18n="label_sticker_shape">形状</label>
+                            <input type="hidden" id="sticker-shape" value="square">
+                            <div id="sticker-shape-container" class="grid grid-cols-3 gap-3 mb-4">
+                                <!-- Shape cards populated by JS -->
+                            </div>
+
+                            <!-- "Other" Shape Description -->
+                            <div id="sticker-other-input" class="hidden mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_sticker_desc">形状の説明</label>
+                                <textarea id="sticker-shape-desc" rows="2"
+                                    class="w-full border-gray-300 border rounded-md p-3 text-sm"
+                                    placeholder=""></textarea>
+                                <div class="mt-2">
+                                    <label class="block text-xs text-gray-500 mb-1"
+                                        data-i18n="label_attach_file">参考ファイル（任意 / Optional）</label>
+                                    <div class="flex items-center gap-2">
+                                        <label for="sticker-ref-file"
+                                            class="cursor-pointer bg-blue-50 text-blue-700 text-sm font-semibold py-2 px-4 rounded-full hover:bg-blue-100 transition border border-blue-100">
+                                            <span data-i18n="btn_upload">ファイルを選択</span>
+                                        </label>
+                                        <span id="file-name-display" class="text-xs text-gray-500"></span>
+                                        <input type="file" id="sticker-ref-file" class="hidden"
+                                            onchange="updateFileName(this)" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dimensions Input (Unified Grid) -->
+                            <div class="mb-3">
+                                <div class="grid grid-cols-3 gap-2 items-end">
+                                    <div id="sticker-group-width">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_width">横</label>
+                                        <input type="number" id="sticker-width" min="0" step="0.1"
+                                            oninput="calculateTotal(); checkDesignProgress();"
+                                            class="sticker-dim-input w-full border-gray-300 border rounded-md p-2"
+                                            placeholder="例：5">
+                                    </div>
+                                    <div id="sticker-group-dia" class="hidden">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_diameter">直径</label>
+                                        <input type="number" id="sticker-diameter" min="0" step="0.1"
+                                            oninput="calculateTotal(); checkDesignProgress();"
+                                            class="sticker-dim-input w-full border-gray-300 border rounded-md p-2"
+                                            placeholder="例：5">
+                                    </div>
+                                    <div id="sticker-group-height">
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_height">縦</label>
+                                        <input type="number" id="sticker-height" min="0" step="0.1"
+                                            oninput="calculateTotal(); checkDesignProgress();"
+                                            class="sticker-dim-input w-full border-gray-300 border rounded-md p-2"
+                                            placeholder="例：5">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_unit">単位</label>
+                                        <select id="sticker-unit" onchange="calculateTotal()"
+                                            class="w-full border-gray-300 border rounded-md p-2 bg-gray-50">
+                                            <option value="cm">cm</option>
+                                            <option value="inch">inch</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p id="sticker-size-error" class="hidden text-xs text-red-500 mt-1 font-bold"></p>
+                            </div>
+
+                        </div>
+
+                        <!-- Banner Design Section -->
+                        <div id="banner-section" class="mb-4 transition-all duration-300 hidden">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="banner_design_instruction">
+                                横断幕のサイズとベース色を指定してください</p>
+                            
+                            <!-- Width Input -->
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_banner_width">幅 (Width)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="banner-width" placeholder="例：90" step="0.1" min="1" 
+                                        oninput="calculateTotal(); checkDesignProgress();"
+                                        class="flex-1 border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <span class="text-sm text-gray-600">cm</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="banner_width_note">
+                                    ※最大120cmまで対応</p>
+                            </div>
+
+                            <!-- Length Input -->
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_banner_length">長さ (Length)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="banner-length" placeholder="例：200" step="0.1" min="1"
+                                        oninput="calculateTotal(); checkDesignProgress();"
+                                        class="flex-1 border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <span class="text-sm text-gray-600">cm</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1" data-i18n="banner_length_note">
+                                    ※1cm単位で指定可能</p>
+                            </div>
+
+                            <!-- Base Color Selection -->
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_banner_base">ベース色 (Base Color)</label>
+                                <select id="banner-base-color" onchange="calculateTotal(); checkDesignProgress();"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="">選択してください / Select base color</option>
+                                    <option value="white" data-i18n="banner_base_white">白地 (White base)</option>
+                                    <option value="color" data-i18n="banner_base_color">フルカラー (Full color base)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="sublimation-styles" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- cards injected by JS -->
+                        </div>
+                    </section>
+                    <section id="quantity-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                            <span data-i18n="step4_quantity">数量</span>
+                        </h2>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" data-i18n="label_qty">総製作枚数</label>
+                        <input type="number" id="total-quantity" name="entry.414967939" min="1"
+                            oninput="validateQuantities(); calculateTotal()"
+                            class="w-full border-gray-300 border rounded-md p-3 text-lg font-bold">
+                        <p class="text-xs text-blue-600 mt-2" data-i18n="qty_discount">※数量が多いほど単価が下がります</p>
+                        <p class="text-xs text-gray-500 mt-1" data-i18n="qty_note">※次のステップで各アイテムの数量を指定します</p>
+                    </section>
+                    <!-- Section 5A: Garment Selection (for 'garment' category) -->
+                    <section id="items-selection-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                            <span data-i18n="step5_items">アイテムを選択</span>
+                        </h2>
+                        <p class="text-sm text-gray-600 mb-4" data-i18n="garment_instruction">
+                            このデザインを適用するアイテムを選択してください（複数選択可）</p>
+                        <div id="garment-selection" class="space-y-3">
+                            <!-- Garment checkboxes will be dynamically populated here -->
+                        </div>
+                        <div id="quantity-alert"
+                            class="hidden mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                            <span data-i18n="qty_mismatch">※各アイテムの数量合計が総数量と一致しません</span>
+                        </div>
+                    </section>
+
+                    <!-- Section 5B: Finishing Options (for 'items' category) -->
+                    <section id="finishing-options-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                            <span data-i18n="step5_finishing">仕上げオプション</span>
+                        </h2>
+                        
+                        <!-- Embroidery Patches Finishing -->
+                        <div id="finishing-embroidery" class="hidden space-y-4">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="finish_emb_instruction">
+                                ワッペンの仕上げ方法を選択してください</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_emb_backing">裏面処理</label>
+                                <select id="finish-emb-backing" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="none">なし (None)</option>
+                                    <option value="iron">アイロン接着 (Iron-on backing) +¥100/pc</option>
+                                    <option value="velcro">ベルクロ (Velcro) +¥200/pc</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_emb_border">縁取り</label>
+                                <select id="finish-emb-border" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="merrowed">メロー縁 (Merrowed edge)</option>
+                                    <option value="hot-cut">ホットカット (Hot cut)</option>
+                                    <option value="laser-cut">レーザーカット (Laser cut) +¥50/pc</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- UV Print Finishing -->
+                        <div id="finishing-uv" class="hidden space-y-4">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="finish_uv_instruction">
+                                UVプリントの仕上げオプションを選択してください</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_uv_coating">コーティング</label>
+                                <select id="finish-uv-coating" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="none">なし (None)</option>
+                                    <option value="gloss">グロス (Gloss) +¥200/pc</option>
+                                    <option value="matte">マット (Matte) +¥200/pc</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sticker Finishing -->
+                        <div id="finishing-sticker" class="hidden space-y-4">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="finish_sticker_instruction">
+                                ステッカーの仕上げオプションを選択してください</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2" data-i18n="label_sticker_finish">仕上げオプション</label>
+                                <select id="sticker-finish" onchange="calculateTotal();"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="none" data-i18n="finish_none">ラミネート加工なし</option>
+                                    <option value="lam" data-i18n="finish_lam">ラミネート加工 (推奨)</option>
+                                    <option value="app" data-i18n="finish_app">アプリケーションシート</option>
+                                    <option value="lam_app" data-i18n="finish_lam_app">ラミネート+アプリ</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Banner Finishing -->
+                        <div id="finishing-banner" class="hidden space-y-4">
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="finish_banner_instruction">
+                                追加の仕上げオプションを選択してください（全てハトメ付き）</p>
+                            
+                            <div class="space-y-2">
+                                <label class="flex items-start gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
+                                    <input type="checkbox" id="banner-twill" onchange="calculateTotal()"
+                                        class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex-1">
+                                        <span class="text-sm font-medium text-gray-700" data-i18n="banner_option_twill">
+                                            ツイル生地（厚手） (Twill Banner - Thicker)</span>
+                                        <span class="text-sm text-blue-600 ml-2">+¥500 / $5.00</span>
+                                    </div>
+                                </label>
+                                
+                                <label class="flex items-start gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
+                                    <input type="checkbox" id="banner-extra-thick" onchange="calculateTotal()"
+                                        class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex-1">
+                                        <span class="text-sm font-medium text-gray-700" data-i18n="banner_option_extra_thick">
+                                            特厚生地 (Extra Thicker Banner)</span>
+                                        <span class="text-sm text-blue-600 ml-2">+¥1,000 / $10.00</span>
+                                    </div>
+                                </label>
+                                
+                                <label class="flex items-start gap-2 cursor-pointer p-2 hover:bg-gray-50 rounded">
+                                    <input type="checkbox" id="banner-double-sided" onchange="calculateTotal()"
+                                        class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                    <div class="flex-1">
+                                        <span class="text-sm font-medium text-gray-700" data-i18n="banner_option_double">
+                                            両面印刷 (Double side print)</span>
+                                        <span class="text-sm text-blue-600 ml-2">+¥2,000 / $20.00</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Flag Finishing - To be added later -->
+                        <div id="finishing-flag" class="hidden space-y-4">
+                            <p class="text-sm text-gray-600" data-i18n="finish_flag_note">
+                                ※のぼりの仕上げオプションは近日追加予定です</p>
+                        </div>
+                    </section>
+                    <section id="secondary-service-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-purple-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-purple-100 text-purple-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">6</span>
+                            <span data-i18n="step6_additional">追加サービス（オプション）</span>
+                        </h2>
+                        <div class="mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="add-secondary-service" onchange="toggleSecondaryService()"
+                                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700"
+                                    data-i18n="label_add_service">追加の加工サービスを利用しますか？</span>
+                            </label>
+                        </div>
+                        <div id="secondary-service-options" class="hidden space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_secondary_service">追加サービス</label>
+                                <select id="secondary-method"
+                                    onchange="updateSecondaryServiceOptions(); calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 focus:ring-blue-500 focus:border-blue-500 bg-gray-50">
+                                    <!-- Options populated dynamically -->
+                                </select>
+                            </div>
+                            <div id="secondary-color-section" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_colors">色数</label>
+                                <select id="secondary-colors" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-yellow-50">
+                                    <option value="1">1色 (1 Color)</option>
+                                    <option value="2">2色 (2 Colors)</option>
+                                    <option value="3">3色 (3 Colors)</option>
+                                    <option value="4">4色以上 (4+ Colors)</option>
+                                </select>
+                            </div>
+                            <div id="secondary-dtf-section" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_dtf_size">DTFサイズ</label>
+                                <select id="secondary-dtf-size" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-yellow-50 mb-2">
+                                    <option value="standard">30cm x 29cm 以内</option>
+                                    <option value="oversize">30cm x 29cm 以上</option>
+                                </select>
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_dtf_locations">箇所数</label>
+                                <select id="secondary-dtf-locations" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50">
+                                    <option value="1">1 箇所</option>
+                                    <option value="2">2 箇所</option>
+                                    <option value="3">3 箇所</option>
+                                    <option value="4">4 箇所</option>
+                                </select>
+                            </div>
+                            <div id="secondary-emb-section" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_emb_target">刺繍の種類</label>
+                                <select id="secondary-emb-target" onchange="calculateTotal()"
+                                    class="w-full border-gray-300 border rounded-md p-3 bg-gray-50 mb-2">
+                                    <option value="garment">衣類に刺繍</option>
+                                    <option value="patch">ワッペン（パッチ）</option>
+                                </select>
+                                <div class="grid grid-cols-3 gap-2 items-end mb-2">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_emb_width">横</label>
+                                        <input type="number" id="secondary-emb-width" min="0" step="0.1"
+                                            oninput="calculateTotal()"
+                                            class="w-full border-gray-300 border rounded-md p-2" placeholder="5.0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_emb_height">縦</label>
+                                        <input type="number" id="secondary-emb-height" min="0" step="0.1"
+                                            oninput="calculateTotal()"
+                                            class="w-full border-gray-300 border rounded-md p-2" placeholder="5.0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1"
+                                            data-i18n="label_emb_unit">単位</label>
+                                        <select id="secondary-emb-unit" onchange="calculateTotal()"
+                                            class="w-full border-gray-300 border rounded-md p-2 bg-gray-50">
+                                            <option value="cm">cm</option>
+                                            <option value="inch">inch</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section id="customer-info-section"
+                        class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-green-500 hidden">
+                        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span
+                                class="bg-green-100 text-green-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">7</span>
+                            <span data-i18n="step7_customer">お客様情報</span>
+                        </h2>
+                        <div class="grid gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_name">お名前</label>
+                                <input type="text" name="entry.1239739696" required
+                                    class="w-full border-gray-300 border rounded-md p-3" placeholder="">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_company">会社名 /
+                                    グループ名 / チーム名</label>
+                                <input type="text" name="entry.2087654321" required
+                                    class="w-full border-gray-300 border rounded-md p-3" placeholder="">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1"
+                                    data-i18n="label_phone">電話番号</label>
+                                <input type="tel" name="entry.1234567890" required
+                                    class="w-full border-gray-300 border rounded-md p-3" placeholder="">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="entry.324319392" required
+                                    class="w-full border-gray-300 border rounded-md p-3"
+                                    placeholder="example@email.com">
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="md:col-span-1">
+                    <div class="bg-gray-800 text-white p-6 rounded-lg shadow-lg sticky top-6">
+                        <h3 class="text-lg font-bold mb-4 border-b border-gray-600 pb-2" data-i18n="summary_title">
+                            概算お見積り</h3>
+                        <div class="text-right mb-1 text-xs text-gray-400" data-i18n="excl_shipping">※送料別・税抜</div>
+
+                        <!-- Item breakdown section -->
+                        <div id="item-breakdown" class="mb-4 space-y-2">
+                            <!-- Individual items will be populated here -->
+                        </div>
+
+                        <!-- Total price section -->
+                        <div class="border-t border-gray-600 pt-3 mt-3">
+                            <div class="text-right text-sm text-gray-300 mb-1" data-i18n="total_label">Total</div>
+                            <div class="text-right text-4xl font-bold text-yellow-400 price-transition"
+                                id="total-price">¥0
+                            </div>
+                        </div>
+
+                        <div class="text-right text-xs text-gray-400 mb-4 mt-2" id="design-fee-note"></div>
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-full transition duration-200 shadow-lg flex justify-center items-center gap-2">
+                            <span class="material-icons">send</span>
+                            <span data-i18n="btn_submit">問い合わせ・注文する</span>
+                        </button>
+                        <p class="mt-4 text-xs text-gray-400 leading-relaxed">
+                            <span data-i18n="notice_submit">送信後、Googleフォームへデータが送信されます。正式な金額はデザインデータ確認後に確定します。</span>
+                        </p>
+                        <input type="hidden" id="hidden-total" name="entry.918590957">
+                        <input type="hidden" id="hidden-currency" name="entry.476172653">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <iframe name="hidden_iframe" id="hidden_iframe"
+        onload="if(typeof submitted !== 'undefined' && submitted){ showSuccessMessage(); }"></iframe>
+    <div id="success-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl text-center max-w-md mx-4">
+            <span class="material-icons text-green-500 text-6xl mb-4">check_circle</span>
+            <h3 class="text-2xl font-bold mb-2">Thank You!</h3>
+            <p class="text-gray-600 mb-6" data-i18n="msg_success">お問い合わせありがとうございます。<br>担当者よりご連絡いたします。</p>
+            <button onclick="closeModal()" class="bg-gray-800 text-white px-6 py-2 rounded-full">Close</button>
+        </div>
+    </div>
+    <script>
+        const itemsData = {
+            wear: {
+                ja: "ウェア", en: "Apparel",
+                items: [
+                    { nameJa: "スタンダードTシャツ", nameEn: "Standard T-Shirt", priceJP: 600, priceUS: 5.00, silkUpchargeJP: 0, silkUpchargeUS: 0, isBasic: true },
+                    { nameJa: "ヘビーウェイトTシャツ", nameEn: "Heavy Weight T-Shirt", priceJP: 900, priceUS: 8.00, silkUpchargeJP: 300, silkUpchargeUS: 3.00 },
+                    { nameJa: "プルオーバーパーカー", nameEn: "Pullover Hoodie", priceJP: 3000, priceUS: 25.00, silkUpchargeJP: 800, silkUpchargeUS: 8.00 },
+                    { nameJa: "ジップアップパーカー", nameEn: "Zip-up Hoodie", priceJP: 3500, priceUS: 29.00, silkUpchargeJP: 1000, silkUpchargeUS: 10.00 }
+                ]
+            },
+            goods: {
+                ja: "グッズ・ステッカー", en: "Goods / Stickers",
+                items: [
+                    { nameJa: "ダイカットステッカー（小）", nameEn: "Die-cut Sticker (Small)", priceJP: 100, priceUS: 1.00, silkUpchargeJP: 50, silkUpchargeUS: 0.50 },
+                    { nameJa: "ダイカットステッカー（大）", nameEn: "Die-cut Sticker (Large)", priceJP: 300, priceUS: 2.50, silkUpchargeJP: 100, silkUpchargeUS: 1.00 },
+                    { nameJa: "トートバッグ", nameEn: "Tote Bag", priceJP: 800, priceUS: 7.00, silkUpchargeJP: 200, silkUpchargeUS: 2.00 }
+                ]
+            },
+            sign: {
+                ja: "のぼり・横断幕", en: "Signage / Banners",
+                items: [
+                    { nameJa: "のぼり（レギュラー）", nameEn: "Nobori Flag (Regular)", priceJP: 1800, priceUS: 15.00, silkUpchargeJP: 0, silkUpchargeUS: 0 },
+                    { nameJa: "メッシュバナー（1平方メートル）", nameEn: "Mesh Banner (per sqm)", priceJP: 5000, priceUS: 45.00, silkUpchargeJP: 0, silkUpchargeUS: 0 }
+                ]
+            }
+        };
+        // --- Silk Screen price matrices (per garment) ---
+        // Quantities: 5〜9, 10〜19, 20〜39, 40〜59, 60〜99, 100〜199, 200〜300, 301+
+        const silkScreenMatrix = {
+            JPY: {
+                qtyTiers: [
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-19", min: 10, max: 19, label: "10 ~ 19" },
+                    { id: "20-39", min: 20, max: 39, label: "20 ~" },
+                    { id: "40-59", min: 40, max: 59, label: "40 ~" },
+                    { id: "60-99", min: 60, max: 99, label: "60 ~" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~" },
+                    { id: "200-300", min: 200, max: 300, label: "200 ~" },
+                    { id: "301+", min: 301, label: "Over 301" }
+                ],
+                rows: [
+                    {
+                        screens: 1,
+                        unitPrices: {
+                            "5-9": 2570,
+                            "10-19": 1440,
+                            "20-39": 1260,
+                            "40-59": 1130,
+                            "60-99": 1020,
+                            "100-199": 960,
+                            "200-300": 900,
+                            "301+": 840
+                        }
+                    },
+                    {
+                        screens: 2,
+                        unitPrices: {
+                            "5-9": 2750,
+                            "10-19": 1610,
+                            "20-39": 1440,
+                            "40-59": 1320,
+                            "60-99": 1130,
+                            "100-199": 1080,
+                            "200-300": 1020,
+                            "301+": 960
+                        }
+                    },
+                    {
+                        screens: 3,
+                        unitPrices: {
+                            "5-9": 2930,
+                            "10-19": 1790,
+                            "20-39": 1630,
+                            "40-59": 1510,
+                            "60-99": 1260,
+                            "100-199": 1190,
+                            "200-300": 1130,
+                            "301+": 1080
+                        }
+                    },
+                    {
+                        screens: 4,
+                        unitPrices: {
+                            "5-9": 3110,
+                            "10-19": 1970,
+                            "20-39": 1820,
+                            "40-59": 1700,
+                            "60-99": 1380,
+                            "100-199": 1320,
+                            "200-300": 1260,
+                            "301+": 1190
+                        }
+                    },
+                    {
+                        screens: 5,
+                        unitPrices: {
+                            "5-9": 3290,
+                            "10-19": 2150,
+                            "20-39": 2030,
+                            "40-59": 1910,
+                            "60-99": 1510,
+                            "100-199": 1440,
+                            "200-300": 1380,
+                            "301+": 1320
+                        }
+                    },
+                    {
+                        screens: 6,
+                        unitPrices: {
+                            "5-9": 3470,
+                            "10-19": 2330,
+                            "20-39": 2200,
+                            "40-59": 2070,
+                            "60-99": 1630,
+                            "100-199": 1570,
+                            "200-300": 1510,
+                            "301+": 1440
+                        }
+                    },
+                    {
+                        screens: 7,
+                        unitPrices: {
+                            "5-9": 3650,
+                            "10-19": 2510,
+                            "20-39": 2390,
+                            "40-59": 2270,
+                            "60-99": 1760,
+                            "100-199": 1700,
+                            "200-300": 1630,
+                            "301+": 1570
+                        }
+                    },
+                    {
+                        screens: 8,
+                        unitPrices: {
+                            "5-9": 3830,
+                            "10-19": 2690,
+                            "20-39": 2570,
+                            "40-59": 2450,
+                            "60-99": 1910,
+                            "100-199": 1820,
+                            "200-300": 1760,
+                            "301+": 1700
+                        }
+                    },
+                    {
+                        screens: 9,
+                        unitPrices: {
+                            "5-9": 4010,
+                            "10-19": 2870,
+                            "20-39": 2760,
+                            "40-59": 2640,
+                            "60-99": 2030,
+                            "100-199": 1950,
+                            "200-300": 1910,
+                            "301+": 1820
+                        }
+                    },
+                    {
+                        screens: 10,
+                        unitPrices: {
+                            "5-9": 4190,
+                            "10-19": 3050,
+                            "20-39": 2950,
+                            "40-59": 2830,
+                            "60-99": 2150,
+                            "100-199": 2070,
+                            "200-300": 2030,
+                            "301+": 1950
+                        }
+                    },
+                    {
+                        screens: 11,
+                        unitPrices: {
+                            "5-9": 4370,
+                            "10-19": 3230,
+                            "20-39": 3140,
+                            "40-59": 3010,
+                            "60-99": 2270,
+                            "100-199": 2200,
+                            "200-300": 2130,
+                            "301+": 2070
+                        }
+                    },
+                    {
+                        screens: 12,
+                        unitPrices: {
+                            "5-9": 4540,
+                            "10-19": 3410,
+                            "20-39": 3350,
+                            "40-59": 3230,
+                            "60-99": 2390,
+                            "100-199": 2320,
+                            "200-300": 2270,
+                            "301+": 2200
+                        }
+                    },
+                    {
+                        screens: 13,
+                        unitPrices: {
+                            "20-39": 3520,
+                            "40-59": 3390,
+                            "60-99": 2510,
+                            "100-199": 2450,
+                            "200-300": 2390,
+                            "301+": 2320
+                        }
+                    },
+                    {
+                        screens: 14,
+                        unitPrices: {
+                            "20-39": 3700,
+                            "40-59": 3590,
+                            "60-99": 2640,
+                            "100-199": 2570,
+                            "200-300": 2510,
+                            "301+": 2450
+                        }
+                    },
+                    {
+                        screens: 15,
+                        unitPrices: {
+                            "20-39": 3890,
+                            "40-59": 3770,
+                            "60-99": 2760,
+                            "100-199": 2700,
+                            "200-300": 2640,
+                            "301+": 2570
+                        }
+                    },
+                    {
+                        screens: 16,
+                        unitPrices: {
+                            "20-39": 4080,
+                            "40-59": 3960,
+                            "60-99": 2890,
+                            "100-199": 2830,
+                            "200-300": 2760,
+                            "301+": 2700
+                        }
+                    },
+                    {
+                        screens: 17,
+                        unitPrices: {
+                            "20-39": 4270,
+                            "40-59": 4140,
+                            "60-99": 3010,
+                            "100-199": 2950,
+                            "200-300": 2890,
+                            "301+": 2830
+                        }
+                    },
+                    {
+                        screens: 18,
+                        unitPrices: {
+                            "20-39": 4460,
+                            "40-59": 4330,
+                            "60-99": 3140,
+                            "100-199": 3080,
+                            "200-300": 3010,
+                            "301+": 2950
+                        }
+                    },
+                    {
+                        screens: 19,
+                        unitPrices: {
+                            "20-39": 4660,
+                            "40-59": 4540,
+                            "60-99": 3270,
+                            "100-199": 3230,
+                            "200-300": 3140,
+                            "301+": 3080
+                        }
+                    },
+                    {
+                        screens: 20,
+                        unitPrices: {
+                            "20-39": 4830,
+                            "40-59": 4710,
+                            "60-99": 3390,
+                            "100-199": 3350,
+                            "200-300": 3270,
+                            "301+": 3230
+                        }
+                    }
+                ]
+            },
+            USD: {
+                // same qty tiers as JPY
+                qtyTiers: [
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-19", min: 10, max: 19, label: "10 ~ 19" },
+                    { id: "20-39", min: 20, max: 39, label: "20 ~" },
+                    { id: "40-59", min: 40, max: 59, label: "40 ~" },
+                    { id: "60-99", min: 60, max: 99, label: "60 ~" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~" },
+                    { id: "200-300", min: 200, max: 300, label: "200 ~" },
+                    { id: "301+", min: 301, label: "Over 301" }
+                ],
+                rows: [
+                    {
+                        screens: 1,
+                        unitPrices: {
+                            "5-9": 22.40,
+                            "10-19": 12.50,
+                            "20-39": 10.90,
+                            "40-59": 9.80,
+                            "60-99": 8.80,
+                            "100-199": 8.30,
+                            "200-300": 7.80,
+                            "301+": 7.30
+                        }
+                    },
+                    {
+                        screens: 2,
+                        unitPrices: {
+                            "5-9": 23.90,
+                            "10-19": 14.00,
+                            "20-39": 12.60,
+                            "40-59": 11.50,
+                            "60-99": 9.80,
+                            "100-199": 9.40,
+                            "200-300": 8.80,
+                            "301+": 8.30
+                        }
+                    },
+                    {
+                        screens: 3,
+                        unitPrices: {
+                            "5-9": 25.50,
+                            "10-19": 15.60,
+                            "20-39": 14.20,
+                            "40-59": 13.10,
+                            "60-99": 10.90,
+                            "100-199": 10.40,
+                            "200-300": 9.80,
+                            "301+": 9.40
+                        }
+                    },
+                    {
+                        screens: 4,
+                        unitPrices: {
+                            "5-9": 27.00,
+                            "10-19": 17.20,
+                            "20-39": 15.80,
+                            "40-59": 14.70,
+                            "60-99": 12.00,
+                            "100-199": 11.50,
+                            "200-300": 10.90,
+                            "301+": 10.40
+                        }
+                    },
+                    {
+                        screens: 5,
+                        unitPrices: {
+                            "5-9": 28.60,
+                            "10-19": 18.70,
+                            "20-39": 17.70,
+                            "40-59": 16.60,
+                            "60-99": 13.10,
+                            "100-199": 12.60,
+                            "200-300": 12.00,
+                            "301+": 11.50
+                        }
+                    },
+                    {
+                        screens: 6,
+                        unitPrices: {
+                            "5-9": 30.20,
+                            "10-19": 20.30,
+                            "20-39": 19.10,
+                            "40-59": 18.00,
+                            "60-99": 14.20,
+                            "100-199": 13.70,
+                            "200-300": 13.10,
+                            "301+": 12.60
+                        }
+                    },
+                    {
+                        screens: 7,
+                        unitPrices: {
+                            "5-9": 31.70,
+                            "10-19": 21.80,
+                            "20-39": 20.70,
+                            "40-59": 19.80,
+                            "60-99": 15.30,
+                            "100-199": 14.70,
+                            "200-300": 14.20,
+                            "301+": 13.70
+                        }
+                    },
+                    {
+                        screens: 8,
+                        unitPrices: {
+                            "5-9": 33.30,
+                            "10-19": 23.40,
+                            "20-39": 22.40,
+                            "40-59": 21.30,
+                            "60-99": 16.60,
+                            "100-199": 15.80,
+                            "200-300": 15.30,
+                            "301+": 14.70
+                        }
+                    },
+                    {
+                        screens: 9,
+                        unitPrices: {
+                            "5-9": 34.80,
+                            "10-19": 25.00,
+                            "20-39": 24.00,
+                            "40-59": 22.90,
+                            "60-99": 17.70,
+                            "100-199": 16.90,
+                            "200-300": 16.60,
+                            "301+": 15.80
+                        }
+                    },
+                    {
+                        screens: 10,
+                        unitPrices: {
+                            "5-9": 36.40,
+                            "10-19": 26.50,
+                            "20-39": 25.70,
+                            "40-59": 24.60,
+                            "60-99": 18.70,
+                            "100-199": 17.80,
+                            "200-300": 17.10,
+                            "301+": 16.90
+                        }
+                    },
+                    {
+                        screens: 11,
+                        unitPrices: {
+                            "5-9": 38.00,
+                            "10-19": 28.10,
+                            "20-39": 27.30,
+                            "40-59": 26.20,
+                            "60-99": 19.80,
+                            "100-199": 18.50,
+                            "200-300": 17.60,
+                            "301+": 17.40
+                        }
+                    },
+                    {
+                        screens: 12,
+                        unitPrices: {
+                            "5-9": 39.50,
+                            "10-19": 29.60,
+                            "20-39": 29.10,
+                            "40-59": 28.10,
+                            "60-99": 20.70,
+                            "100-199": 19.30,
+                            "200-300": 18.10,
+                            "301+": 17.90
+                        }
+                    },
+                    {
+                        screens: 13,
+                        unitPrices: {
+                            "20-39": 30.60,
+                            "40-59": 29.50,
+                            "60-99": 21.80,
+                            "100-199": 20.10,
+                            "200-300": 18.60,
+                            "301+": 18.40
+                        }
+                    },
+                    {
+                        screens: 14,
+                        unitPrices: {
+                            "20-39": 32.20,
+                            "40-59": 31.20,
+                            "60-99": 22.90,
+                            "100-199": 21.00,
+                            "200-300": 19.10,
+                            "301+": 18.90
+                        }
+                    },
+                    {
+                        screens: 15,
+                        unitPrices: {
+                            "20-39": 33.90,
+                            "40-59": 32.80,
+                            "60-99": 24.00,
+                            "100-199": 21.90,
+                            "200-300": 19.60,
+                            "301+": 19.40
+                        }
+                    },
+                    {
+                        screens: 16,
+                        unitPrices: {
+                            "20-39": 35.50,
+                            "40-59": 34.40,
+                            "60-99": 25.10,
+                            "100-199": 22.80,
+                            "200-300": 21.10,
+                            "301+": 19.90
+                        }
+                    },
+                    {
+                        screens: 17,
+                        unitPrices: {
+                            "20-39": 37.10,
+                            "40-59": 36.00,
+                            "60-99": 26.20,
+                            "100-199": 23.70,
+                            "200-300": 21.60,
+                            "301+": 20.40
+                        }
+                    },
+                    {
+                        screens: 18,
+                        unitPrices: {
+                            "20-39": 38.80,
+                            "40-59": 37.70,
+                            "60-99": 27.30,
+                            "100-199": 24.60,
+                            "200-300": 22.10,
+                            "301+": 20.90
+                        }
+                    },
+                    {
+                        screens: 19,
+                        unitPrices: {
+                            "20-39": 40.60,
+                            "40-59": 39.50,
+                            "60-99": 28.40,
+                            "100-199": 25.50,
+                            "200-300": 22.60,
+                            "301+": 21.40
+                        }
+                    },
+                    {
+                        screens: 20,
+                        unitPrices: {
+                            "20-39": 42.00,
+                            "40-59": 41.00,
+                            "60-99": 29.50,
+                            "100-199": 26.40,
+                            "200-300": 23.10,
+                            "301+": 21.90
+                        }
+                    }
+                ]
+            }
+        };
+
+        // --- DTF matrices (per garment, 1 location) ---
+        // Qty tiers: 1〜4, 5〜9, 10〜19, 20〜39, 40〜59, 60〜99, 100〜199, 200+
+        const dtfMatrix = {
+            JPY: {
+                qtyTiers: [
+                    { id: "1-4", min: 1, max: 4, label: "1 ~ 4" },
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-19", min: 10, max: 19, label: "10 ~ 19" },
+                    { id: "20-39", min: 20, max: 39, label: "20 ~ 39" },
+                    { id: "40-59", min: 40, max: 59, label: "40 ~ 59" },
+                    { id: "60-99", min: 60, max: 99, label: "60 ~ 99" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~ 199" },
+                    { id: "200+", min: 200, label: "200 +" }
+                ],
+                rows: [
+                    {
+                        sizeId: "standard", // 30cm x 29cm 以内
+                        unitPrices: {
+                            "1-4": 2000,
+                            "5-9": 1800,
+                            "10-19": 1700,
+                            "20-39": 1600,
+                            "40-59": 1500,
+                            "60-99": 1450,
+                            "100-199": 1400,
+                            "200+": 1350
+                        }
+                    },
+                    {
+                        sizeId: "oversize", // 30cm x 29cm 以上
+                        unitPrices: {
+                            "1-4": 2300,
+                            "5-9": 2100,
+                            "10-19": 2000,
+                            "20-39": 1900,
+                            "40-59": 1800,
+                            "60-99": 1750,
+                            "100-199": 1700,
+                            "200+": 1650
+                        }
+                    }
+                ]
+            },
+            USD: {
+                qtyTiers: [
+                    { id: "1-4", min: 1, max: 4, label: "1 ~ 4" },
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-19", min: 10, max: 19, label: "10 ~ 19" },
+                    { id: "20-39", min: 20, max: 39, label: "20 ~ 39" },
+                    { id: "40-59", min: 40, max: 59, label: "40 ~ 59" },
+                    { id: "60-99", min: 60, max: 99, label: "60 ~ 99" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~ 199" },
+                    { id: "200+", min: 200, label: "Over 200" }
+                ],
+                rows: [
+                    {
+                        sizeId: "standard", // Within 30cm x 29cm
+                        unitPrices: {
+                            "1-4": 20.00,
+                            "5-9": 18.00,
+                            "10-19": 14.00,
+                            "20-39": 13.00,
+                            "40-59": 12.00,
+                            "60-99": 11.75,
+                            "100-199": 11.50,
+                            "200+": 11.25
+                        }
+                    },
+                    {
+                        sizeId: "oversize", // Over 30 x 29cm
+                        unitPrices: {
+                            "1-4": 23.00,
+                            "5-9": 21.00,
+                            "10-19": 17.00,
+                            "20-39": 16.00,
+                            "40-59": 15.00,
+                            "60-99": 14.75,
+                            "100-199": 14.50,
+                            "200+": 14.25
+                        }
+                    }
+                ]
+            }
+        };
+
+        // --- Embroidery matrices (per piece, includes basic garment) ---
+        // Qty tiers: 1〜5, 6〜19, 20〜49, 50〜99, 100+ (100+ is "ご相談"/ASK / no auto price)
+        const embroideryMatrix = {
+            JPY: {
+                qtyTiers: [
+                    { id: "1-5", min: 1, max: 5, label: "1 ~ 5" },
+                    { id: "6-19", min: 6, max: 19, label: "6 ~ 19" },
+                    { id: "20-49", min: 20, max: 49, label: "20 ~ 49" },
+                    { id: "50-99", min: 50, max: 99, label: "50 ~ 99" },
+                    { id: "100+", min: 100, label: "100 +" }
+                ],
+                rows: [
+                    {
+                        minArea: 0,
+                        maxArea: 35,
+                        unitPrices: {
+                            "1-5": 960,
+                            "6-19": 720,
+                            "20-49": 600,
+                            "50-99": 480
+                            // 100+ is ご相談
+                        }
+                    },
+                    {
+                        minArea: 36,
+                        maxArea: 60,
+                        unitPrices: {
+                            "1-5": 1080,
+                            "6-19": 780,
+                            "20-49": 660,
+                            "50-99": 540
+                        }
+                    },
+                    {
+                        minArea: 61,
+                        maxArea: 80,
+                        unitPrices: {
+                            "1-5": 1200,
+                            "6-19": 900,
+                            "20-49": 780,
+                            "50-99": 660
+                        }
+                    },
+                    {
+                        minArea: 81,
+                        maxArea: 100,
+                        unitPrices: {
+                            "1-5": 1440,
+                            "6-19": 1140,
+                            "20-49": 1020,
+                            "50-99": 900
+                        }
+                    },
+                    {
+                        minArea: 101,
+                        maxArea: 144,
+                        unitPrices: {
+                            "1-5": 1840,
+                            "6-19": 1540,
+                            "20-49": 1420,
+                            "50-99": 1300
+                        }
+                    },
+                    {
+                        minArea: 145,
+                        maxArea: 185,
+                        unitPrices: {
+                            "1-5": 2240,
+                            "6-19": 1940,
+                            "20-49": 1820,
+                            "50-99": 1700
+                        }
+                    },
+                    {
+                        minArea: 186,
+                        maxArea: 225,
+                        unitPrices: {
+                            "1-5": 3000,
+                            "6-19": 2700,
+                            "20-49": 2580,
+                            "50-99": 2460
+                        }
+                    },
+                    {
+                        minArea: 226,
+                        maxArea: 324,
+                        unitPrices: {
+                            "1-5": 5600,
+                            "6-19": 5300,
+                            "20-49": 5180,
+                            "50-99": 5060
+                        }
+                    },
+                    {
+                        minArea: 325,
+                        maxArea: 441,
+                        unitPrices: {
+                            "1-5": 6700,
+                            "6-19": 6400,
+                            "20-49": 6280,
+                            "50-99": 6160
+                        }
+                    },
+                    {
+                        minArea: 442,
+                        maxArea: 576,
+                        unitPrices: {
+                            "1-5": 4640,
+                            "6-19": 4640,
+                            "20-49": 4640,
+                            "50-99": 4640
+                        }
+                    },
+                    {
+                        minArea: 577,
+                        maxArea: 729,
+                        unitPrices: {
+                            "1-5": 5240,
+                            "6-19": 5240,
+                            "20-49": 5240,
+                            "50-99": 5240
+                        }
+                    },
+                    {
+                        minArea: 730,
+                        maxArea: 900,
+                        unitPrices: {
+                            "1-5": 5840,
+                            "6-19": 5840,
+                            "20-49": 5840,
+                            "50-99": 5840
+                        }
+                    }
+                ]
+            },
+            USD: {
+                qtyTiers: [
+                    { id: "1-5", min: 1, max: 5, label: "1 ~ 5" },
+                    { id: "6-19", min: 6, max: 19, label: "6 ~ 19" },
+                    { id: "20-49", min: 20, max: 49, label: "20 ~ 49" },
+                    { id: "50-99", min: 50, max: 99, label: "50 ~ 99" },
+                    { id: "100+", min: 100, label: "100 +" }
+                ],
+                rows: [
+                    {
+                        minArea: 0,
+                        maxArea: 35,
+                        unitPrices: {
+                            "1-5": 8.00,
+                            "6-19": 6.00,
+                            "20-49": 5.00,
+                            "50-99": 4.00
+                            // 100+ is ASK
+                        }
+                    },
+                    {
+                        minArea: 36,
+                        maxArea: 60,
+                        unitPrices: {
+                            "1-5": 9.00,
+                            "6-19": 6.50,
+                            "20-49": 5.50,
+                            "50-99": 4.50
+                        }
+                    },
+                    {
+                        minArea: 61,
+                        maxArea: 80,
+                        unitPrices: {
+                            "1-5": 10.00,
+                            "6-19": 7.50,
+                            "20-49": 6.50,
+                            "50-99": 5.50
+                        }
+                    },
+                    {
+                        minArea: 81,
+                        maxArea: 100,
+                        unitPrices: {
+                            "1-5": 12.00,
+                            "6-19": 9.50,
+                            "20-49": 8.50,
+                            "50-99": 7.50
+                        }
+                    },
+                    {
+                        minArea: 101,
+                        maxArea: 144,
+                        unitPrices: {
+                            "1-5": 16.00,
+                            "6-19": 13.50,
+                            "20-49": 12.50,
+                            "50-99": 11.50
+                        }
+                    },
+                    {
+                        minArea: 145,
+                        maxArea: 185,
+                        unitPrices: {
+                            "1-5": 20.00,
+                            "6-19": 17.50,
+                            "20-49": 16.50,
+                            "50-99": 15.50
+                        }
+                    },
+                    {
+                        minArea: 186,
+                        maxArea: 225,
+                        unitPrices: {
+                            "1-5": 25.00,
+                            "6-19": 22.50,
+                            "20-49": 21.50,
+                            "50-99": 20.50
+                        }
+                    },
+                    {
+                        minArea: 226,
+                        maxArea: 324,
+                        unitPrices: {
+                            "1-5": 30.00,
+                            "6-19": 27.50,
+                            "20-49": 26.50,
+                            "50-99": 25.50
+                        }
+                    }
+                ]
+            }
+        };
+
+        // --- Sublimation base matrices (per garment, before style adjustment) ---
+        // Qty tiers: 1, 2, 3, 4, 5〜9, 10〜49, 50〜99, 100〜199, 200+
+        const sublimationBaseMatrix = {
+            JPY: {
+                qtyTiers: [
+                    { id: "1", min: 1, max: 1, label: "1" },
+                    { id: "2", min: 2, max: 2, label: "2" },
+                    { id: "3", min: 3, max: 3, label: "3" },
+                    { id: "4", min: 4, max: 4, label: "4" },
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-49", min: 10, max: 49, label: "10 ~ 49" },
+                    { id: "50-99", min: 50, max: 99, label: "50 ~ 99" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~ 199" },
+                    { id: "200+", min: 200, label: "200 +" }
+                ],
+                unitPrices: {
+                    "1": 5900,
+                    "2": 5400,
+                    "3": 5150,
+                    "4": 4900,
+                    "5-9": 3900,
+                    "10-49": 3300,
+                    "50-99": 3200,
+                    "100-199": 3100,
+                    "200+": 3000
+                }
+            },
+            USD: {
+                qtyTiers: [
+                    { id: "1", min: 1, max: 1, label: "1" },
+                    { id: "2", min: 2, max: 2, label: "2" },
+                    { id: "3", min: 3, max: 3, label: "3" },
+                    { id: "4", min: 4, max: 4, label: "4" },
+                    { id: "5-9", min: 5, max: 9, label: "5 ~ 9" },
+                    { id: "10-49", min: 10, max: 49, label: "10 ~ 49" },
+                    { id: "50-99", min: 50, max: 99, label: "50 ~ 99" },
+                    { id: "100-199", min: 100, max: 199, label: "100 ~ 199" },
+                    { id: "200+", min: 200, label: "200 +" }
+                ],
+                unitPrices: {
+                    "1": 44.00,
+                    "2": 40.00,
+                    "3": 38.00,
+                    "4": 36.50,
+                    "5-9": 29.00,
+                    "10-49": 25.00,
+                    "50-99": 24.00,
+                    "100-199": 23.00,
+                    "200+": 22.00
+                }
+            }
+        };
+        // --- Sticker matrices ---
+        const stickerMatrix = {
+            JPY: {
+                qtyTiers: [
+                    { id: "50-199", min: 50, max: 199, label: "50 ~ 199" },
+                    { id: "200+", min: 200, label: "200 +" }
+                ],
+                // rows correspond to Size Tiers: 1 (5-10cm), 2 (11-15cm), 3 (16-20cm)
+                rows: [
+                    {
+                        sizeId: "s1", // 5-10cm
+                        unitPrices: {
+                            "none": { "50-199": 80, "200+": 65 },       // No Lamination
+                            "lam": { "50-199": 110, "200+": 100 },      // Lamination
+                            "app": { "50-199": 110, "200+": 100 },      // Application sheet
+                            "lam_app": { "50-199": 120, "200+": 110 }   // Lam + App
+                        }
+                    },
+                    {
+                        sizeId: "s2", // 11-15cm
+                        unitPrices: {
+                            "none": { "50-199": 100, "200+": 85 },
+                            "lam": { "50-199": 130, "200+": 115 },
+                            "app": { "50-199": 130, "200+": 115 },
+                            "lam_app": { "50-199": 140, "200+": 125 }
+                        }
+                    },
+                    {
+                        sizeId: "s3", // 16-20cm
+                        unitPrices: {
+                            "none": { "50-199": 150, "200+": 145 },
+                            "lam": { "50-199": 180, "200+": 175 },
+                            "app": { "50-199": 180, "200+": 175 },
+                            "lam_app": { "50-199": 190, "200+": 185 }
+                        }
+                    }
+                ]
+            },
+            USD: {
+                qtyTiers: [
+                    { id: "50-199", min: 50, max: 199, label: "50 ~ 199" },
+                    { id: "200+", min: 200, label: "200 +" }
+                ],
+                rows: [
+                    {
+                        sizeId: "s1", // 2in ~ 4in
+                        unitPrices: {
+                            "none": { "50-199": 0.60, "200+": 0.50 },
+                            "lam": { "50-199": 0.80, "200+": 0.70 },
+                            "app": { "50-199": 0.80, "200+": 0.70 },
+                            "lam_app": { "50-199": 0.90, "200+": 0.80 }
+                        }
+                    },
+                    {
+                        sizeId: "s2", // 4.1in ~ 6in
+                        unitPrices: {
+                            "none": { "50-199": 0.75, "200+": 0.65 },
+                            "lam": { "50-199": 0.95, "200+": 0.85 },
+                            "app": { "50-199": 0.95, "200+": 0.85 },
+                            "lam_app": { "50-199": 1.00, "200+": 0.95 }
+                        }
+                    },
+                    {
+                        sizeId: "s3", // 6.1in ~ 8in
+                        unitPrices: {
+                            "none": { "50-199": 1.10, "200+": 1.00 },
+                            "lam": { "50-199": 1.30, "200+": 1.20 },
+                            "app": { "50-199": 1.30, "200+": 1.20 },
+                            "lam_app": { "50-199": 1.40, "200+": 1.30 }
+                        }
+                    }
+                ]
+            }
+        };
+
+        // --- Banner pricing matrices ---
+        // Pricing based on width bracket (up to 90cm or 91-120cm) and length (1M to 5M)
+        // Base color: white or full color
+        const bannerPricing = {
+            JPY: {
+                // Width up to 90cm
+                "90": {
+                    white: {
+                        "1.0": 2400, "1.5": 3500, "2.0": 4600, "2.5": 6800, 
+                        "3.0": 7900, "3.5": 9000, "4.0": 10100, "4.5": 11200, "5.0": 12300
+                    },
+                    color: {
+                        "1.0": 3400, "1.5": 4500, "2.0": 5600, "2.5": 7800, 
+                        "3.0": 8900, "3.5": 10000, "4.0": 11100, "4.5": 12200, "5.0": 13300
+                    }
+                },
+                // Width 91-120cm
+                "120": {
+                    white: {
+                        "1.0": 2600, "1.5": 3700, "2.0": 4800, "2.5": 7000, 
+                        "3.0": 8100, "3.5": 9200, "4.0": 10300, "4.5": 11400, "5.0": 12500
+                    },
+                    color: {
+                        "1.0": 3600, "1.5": 4700, "2.0": 5800, "2.5": 8000, 
+                        "3.0": 9100, "3.5": 10200, "4.0": 11300, "4.5": 12400, "5.0": 13500
+                    }
+                }
+            },
+            USD: {
+                // Width up to 90cm
+                "90": {
+                    white: {
+                        "1.0": 23, "1.5": 34, "2.0": 45, "2.5": 57, 
+                        "3.0": 69, "3.5": 81, "4.0": 93, "4.5": 105, "5.0": 117
+                    },
+                    color: {
+                        "1.0": 33, "1.5": 44, "2.0": 55, "2.5": 67, 
+                        "3.0": 79, "3.5": 91, "4.0": 103, "4.5": 115, "5.0": 127
+                    }
+                },
+                // Width 91-120cm
+                "120": {
+                    white: {
+                        "1.0": 25, "1.5": 36, "2.0": 47, "2.5": 59, 
+                        "3.0": 71, "3.5": 83, "4.0": 95, "4.5": 107, "5.0": 119
+                    },
+                    color: {
+                        "1.0": 35, "1.5": 46, "2.0": 57, "2.5": 69, 
+                        "3.0": 81, "3.5": 93, "4.0": 105, "4.5": 117, "5.0": 129
+                    }
+                }
+            }
+        };
+
+        // Sublimation style adjustments (per garment) by code
+        const sublimationStyles = [
+            { id: "8007", ja: "クルーネックT", en: "Crew neck T", adjJPY: 0, adjUSD: 0 },
+            { id: "2846", ja: "VネックT", en: "V neck T", adjJPY: 0, adjUSD: 0 },
+            { id: "7200", ja: "クルー袖なし", en: "Crew No Sleeve", adjJPY: 0, adjUSD: 0 },
+            { id: "7016", ja: "V袖なし", en: "V No Sleeve", adjJPY: 0, adjUSD: 0 },
+            { id: "645", ja: "クルー長袖", en: "Crew Long T", adjJPY: 550, adjUSD: 4.00 },
+            { id: "6465", ja: "Vネック長袖", en: "V neck long T", adjJPY: 550, adjUSD: 4.00 },
+            { id: "7307", ja: "2 ボタン", en: "2 button baseball jersey", adjJPY: 550, adjUSD: 4.00 },
+            { id: "3939", ja: "2ボタン(ラグラン)", en: "2 button raglan baseball jersey", adjJPY: 550, adjUSD: 4.00 },
+            { id: "7067", ja: "フルボタン", en: "Full button baseball jersey", adjJPY: 800, adjUSD: 6.00 },
+            { id: "48", ja: "フルボタンラグラン", en: "Full Button Raglan Baseball Jersey", adjJPY: 800, adjUSD: 6.00 },
+            { id: "96", ja: "VネックラグランT", en: "V Neck Raglan T-shirt", adjJPY: 0, adjUSD: 0 },
+            { id: "3669", ja: "クルーネックラグランT", en: "Crew neck Raglan T-shirt", adjJPY: 0, adjUSD: 0 },
+            { id: "7738", ja: "レディースフィットT", en: "Ladies Fitted Tee", adjJPY: 0, adjUSD: 0 },
+            { id: "9120", ja: "半袖ポロ", en: "Polo shirts", adjJPY: 1350, adjUSD: 10.00 },
+            { id: "4649", ja: "長袖ポロ", en: "Long sleeve Polo", adjJPY: 1900, adjUSD: 14.00 },
+            { id: "crew_sweat", ja: "クルースウェット", en: "Crewneck Sweatshirt", adjJPY: 1500, adjUSD: 11.00 },
+            { id: "72", ja: "フーディー", en: "Hoodie", adjJPY: 2000, adjUSD: 15.00 },
+            { id: "full_zip", ja: "フルジップ", en: "Full Zip (No Hood)", adjJPY: 2835, adjUSD: 21.00 },
+            { id: "7350", ja: "1/4ジップ", en: "1/4 Zip (No Hood)", adjJPY: 2160, adjUSD: 16.00 },
+            { id: "AO58", ja: "アロハシャツ", en: "Aloha", adjJPY: 1350, adjUSD: 10.00 },
+            { id: "9351", ja: "ショーツ", en: "Shorts", adjJPY: -700, adjUSD: -5.00 },
+            { id: "9351SS", ja: "ショーツ(スリット有)", en: "Shorts w/ Side Slit", adjJPY: -300, adjUSD: -2.00 }
+        ];
+
+        const methodCosts = {
+            silk: { baseJP: 8000, unitJP: 200, baseUS: 70, unitUS: 1.8 },
+            dtf: { baseJP: 2000, unitJP: 800, baseUS: 15, unitUS: 7.0 },
+            embroidery: { baseJP: 4000, unitJP: 600, baseUS: 35, unitUS: 5.5 },
+            sublimation: { baseJP: 0, unitJP: 1500, baseUS: 0, unitUS: 12.0 },
+            uv: { baseJP: 1000, unitJP: 500, baseUS: 10, unitUS: 4.5 },
+            sticker: { baseJP: 0, unitJP: 0, baseUS: 0, unitUS: 0 },
+            banner: { baseJP: 0, unitJP: 0, baseUS: 0, unitUS: 0 },
+            flag: { baseJP: 0, unitJP: 0, baseUS: 0, unitUS: 0 }
+        };
+        const i18n = {
+            ja: {
+                step1_category: "1. 印刷カテゴリを選択",
+                step2_service: "2. 加工方法を選択",
+                step3_design: "3. デザイン情報",
+                step4_quantity: "4. 数量",
+                step5_items: "5. アイテムを選択",
+                step5_finishing: "5. 仕上げオプション",
+                step6_additional: "6. 追加サービス（オプション）",
+                step7_customer: "7. お客様情報",
+                category_instruction: "まず、何に印刷しますか？",
+                service_instruction: "サービスを選択してください",
+                label_service: "加工サービス",
+                label_category: "カテゴリ",
+                label_item: "アイテム名",
+                label_method: "加工サービス",
+                label_colors: "色数（デザインに含まれる色）",
+                label_locations: "プリント位置",
+                loc_left_chest: "左胸",
+                loc_right_chest: "右胸",
+                loc_front_overall: "全面",
+                loc_back_overall: "背面全体",
+                loc_left_sleeve: "左袖",
+                loc_right_sleeve: "右袖",
+                loc_back_neck: "バックネック",
+                design_summary: "デザイン概要",
+                summary_colors_label: "色数:",
+                summary_locations_label: "位置:",
+                silk_instruction: "プリント位置を選択して、各位置の色数を指定してください",
+                add_location: "位置を追加",
+                loc_undecided: "未定（色数のみ）",
+                loc_other: "その他（カスタム）",
+                colors_label: "色数",
+                hint_colors: "※データ確認後に確定します",
+                label_dtf_size: "DTFプリントサイズ",
+                label_dtf_locations: "DTFプリント箇所数",
+                label_emb_target: "刺繍の種類",
+                label_emb_width: "横サイズ",
+                label_emb_height: "縦サイズ",
+                label_emb_unit: "単位",
+                label_emb_patch_option: "ワッペン仕上げ",
+                hint_emb_size: "※幅と高さから自動で刺繍サイズ区分を判定します",
+                design_fee_note: "※デザイン費が別途かかる場合があります（数量により異なります）",
+                label_sub_style: "昇華プリントスタイル",
+                hint_sub_style: "※スタイルにより単価が変わります（ベース価格＋スタイル差額）",
+                label_qty: "総製作枚数",
+                qty_discount: "※数量が多いほど単価が下がります",
+                qty_note: "※次のステップで各アイテムの数量を指定します",
+                qty_mismatch: "※各アイテムの数量合計が総数量と一致しません",
+                garment_instruction: "このデザインを適用するアイテムを選択してください（複数選択可）",
+                label_add_service: "追加の加工サービスを利用しますか？",
+                label_secondary_service: "追加サービス",
+                label_name: "お名前",
+                label_company: "会社名 / グループ名 / チーム名",
+                label_phone: "電話番号",
+                summary_title: "概算お見積り",
+                summary_item: "アイテム単価",
+                summary_print: "加工費 (目安)",
+                label_sticker_size: "サイズ",
+                label_sticker_finish: "仕上げオプション",
+                finish_none: "ラミネート加工なし",
+                finish_lam: "ラミネート加工 (オススメ)",
+                finish_app: "アプリケーションシート",
+                finish_lam_app: "ラミネート+アプリ",
+                sticker_size_s1: "5cm ~ 10cm",
+                sticker_size_s2: "11cm ~ 15cm",
+                sticker_size_s3: "16cm ~ 20cm",
+                total_label: "合計",
+                excl_shipping: "※送料別・税抜",
+                btn_submit: "問い合わせ・注文する",
+                notice_submit: "送信後、Googleフォームへデータが送信されます。正式な金額はデザインデータ確認後に確定します。",
+                msg_success: "お問い合わせありがとうございます。<br>担当者よりご連絡いたします。",
+                label_width: "横サイズ",
+                label_height: "縦サイズ",
+                label_diameter: "直径",
+                label_unit: "単位",
+                label_sticker_shape: "形状",
+                label_sticker_desc: "形状の説明",
+                label_attach_file: "参考ファイル（任意 / Optional）",
+                btn_upload: "ファイルを選択",
+                finish_emb_instruction: "ワッペンの仕上げ方法を選択してください",
+                label_emb_backing: "裏面処理",
+                label_emb_border: "縁取り",
+                finish_uv_instruction: "UVプリントの仕上げオプションを選択してください",
+                label_uv_coating: "コーティング",
+                finish_sticker_instruction: "ステッカーの仕上げオプションを選択してください",
+                banner_design_instruction: "横断幕のサイズとベース色を指定してください",
+                finish_banner_instruction: "追加の仕上げオプションを選択してください（全てハトメ付き）",
+                label_banner_width: "幅 (Width)",
+                banner_width_note: "※最大120cmまで対応",
+                label_banner_length: "長さ (Length)",
+                banner_length_note: "※1cm単位で指定可能",
+                label_banner_base: "ベース色 (Base Color)",
+                banner_base_white: "白地 (White base)",
+                banner_base_color: "フルカラー (Full color base)",
+                label_banner_options: "追加オプション (Additional Options)",
+                banner_option_twill: "ツイル生地（厚手） (Twill Banner - Thicker)",
+                banner_option_extra_thick: "特厚生地 (Extra Thicker Banner)",
+                banner_option_double: "両面印刷 (Double side print)",
+                finish_flag_note: "※のぼりの仕上げオプションは近日追加予定です"
+            },
+            en: {
+                step1_category: "1. Select Print Category",
+                step2_service: "2. Select Service Method",
+                step3_design: "3. Design Info",
+                step4_quantity: "4. Quantity",
+                step5_items: "5. Select Items",
+                step5_finishing: "5. Finishing Options",
+                step6_additional: "6. Additional Service (Optional)",
+                step7_customer: "7. Your Info",
+                category_instruction: "First, what would you like to print on?",
+                service_instruction: "Please select a service type",
+                label_service: "Service Type",
+                label_category: "Category",
+                label_item: "Product Name",
+                label_method: "Service Type",
+                label_colors: "Number of Colors",
+                label_locations: "Print Locations",
+                loc_left_chest: "Left Chest",
+                loc_right_chest: "Right Chest",
+                loc_front_overall: "Front Overall",
+                loc_back_overall: "Back Overall",
+                loc_left_sleeve: "Left Sleeve",
+                loc_right_sleeve: "Right Sleeve",
+                loc_back_neck: "Back Neck",
+                design_summary: "Design Summary",
+                summary_colors_label: "Colors:",
+                summary_locations_label: "Locations:",
+                silk_instruction: "Select print locations and specify colors for each location",
+                add_location: "Add Location",
+                loc_undecided: "Undecided (Colors only)",
+                loc_other: "Other (Custom)",
+                colors_label: "Colors",
+                hint_colors: "*Verified after data check",
+                label_dtf_size: "DTF Print Size",
+                label_dtf_locations: "Number of DTF Print Locations",
+                label_emb_target: "Embroidery Type",
+                label_emb_width: "Width",
+                label_emb_height: "Height",
+                label_emb_unit: "Unit",
+                label_emb_patch_option: "Patch Finish",
+                hint_emb_size: "*Area is auto-bucketed from width × height",
+                design_fee_note: "*Design fee may apply for small runs (varies by quantity)",
+                label_sub_style: "Sublimation Style",
+                label_sticker_size: "Size",
+                label_sticker_finish: "Finish Option",
+                finish_none: "No Lamination",
+                finish_lam: "Lamination (Recommended)",
+                finish_app: "Application Sheet",
+                finish_lam_app: "Lam + App Sheet",
+                sticker_size_s1: "2in ~ 4in",
+                sticker_size_s2: "4.1in ~ 6in",
+                sticker_size_s3: "6.1in ~ 8in",
+                hint_sub_style: "*Unit price = base price by quantity + style adjustment",
+                label_qty: "Total Quantity",
+                qty_discount: "*Volume discount applies for larger orders",
+                qty_note: "*You'll specify quantities for each item in the next step",
+                qty_mismatch: "*Total garment quantities don't match the total quantity",
+                garment_instruction: "Select garments for this design (multiple selection allowed)",
+                label_add_service: "Add another service?",
+                label_secondary_service: "Secondary Service",
+                label_name: "Name",
+                label_company: "Company / Group / Team Name",
+                label_phone: "Phone Number",
+                summary_title: "Estimated Quote",
+                summary_item: "Item Price",
+                summary_print: "Print Cost",
+                total_label: "Total",
+                excl_shipping: "*Excl. Shipping & Tax",
+                btn_submit: "Request Quote / Order",
+                notice_submit: "Data will be sent via Google Forms. Final price confirmed after design review.",
+                msg_success: "Thank you for your inquiry.<br>We will contact you shortly.",
+                label_width: "Width",
+                label_height: "Height",
+                label_diameter: "Diameter",
+                label_unit: "Unit",
+                label_sticker_shape: "Shape",
+                label_sticker_desc: "Effect / Desc",
+                label_attach_file: "Attach File (Optional)",
+                btn_upload: "Upload a File",
+                finish_emb_instruction: "Select finishing options for your patches",
+                label_emb_backing: "Backing",
+                label_emb_border: "Border/Edge",
+                finish_uv_instruction: "Select finishing options for UV print",
+                label_uv_coating: "Coating",
+                finish_sticker_instruction: "Select finishing options for your stickers",
+                banner_design_instruction: "Specify banner size and base color",
+                finish_banner_instruction: "Select additional finishing options (All come with grommets)",
+                label_banner_width: "Width",
+                banner_width_note: "*Maximum width: 120cm",
+                label_banner_length: "Length",
+                banner_length_note: "*Can be specified in 1cm increments",
+                label_banner_base: "Base Color",
+                banner_base_white: "White base",
+                banner_base_color: "Full color base",
+                label_banner_options: "Additional Options",
+                banner_option_twill: "Twill Banner (Thicker)",
+                banner_option_extra_thick: "Extra Thicker Banner",
+                banner_option_double: "Double side print",
+                finish_flag_note: "*Flag finishing options coming soon"
+            }
+        };
+        let currentLang = 'ja';
+        let currentCurrency = 'JPY';
+        let submitted = false;
+
+        // Category options
+        const categoryOptions = [
+            { id: 'garment', ja: '衣類にプリント', en: 'Print on Garment', icon: '👕', description_ja: 'Tシャツ、パーカー等', description_en: 'T-shirts, Hoodies, etc.' },
+            { id: 'items', ja: 'アイテムにプリント', en: 'Print on Items', icon: '🎁', description_ja: 'フラッグ、タオル、マグカップ等', description_en: 'Flags, Towels, Mugs, Stickers, etc.' }
+        ];
+
+        // Service options with category assignments
+        const serviceOptions = [
+            { id: 'silk', ja: 'シルクスクリーン', en: 'Silk Screen', icon: '🎨', category: 'garment' },
+            { id: 'dtf', ja: 'DTF転写', en: 'DTF Transfer', icon: '🖨️', category: 'garment' },
+            { id: 'embroidery', ja: '刺繍', en: 'Embroidery', icon: '🧵', category: 'garment' },
+            { id: 'sublimation', ja: '昇華プリント', en: 'Sublimation', icon: '✨', category: 'garment' },
+            { id: 'embroidery', ja: '刺繍パッチ', en: 'Embroidery Patches', icon: '🧵', category: 'items' },
+            { id: 'uv', ja: 'UVプリント', en: 'UV Print', icon: '💡', category: 'items', comingSoon: true },
+            { id: 'sticker', ja: 'ステッカー', en: 'Sticker', icon: '📌', category: 'items' },
+            { id: 'banner', ja: '横断幕', en: 'Banner', icon: '🎏', category: 'items' },
+            { id: 'flag', ja: 'のぼり', en: 'Flag', icon: '🚩', category: 'items' }
+        ];
+
+        // Sticker shape options
+        const stickerShapeOptions = [
+            { id: 'square', ja: '四角形', en: 'Square/Rectangle', icon: 'crop_square' },
+            { id: 'circle', ja: '丸型', en: 'Circle', icon: 'panorama_fish_eye' },
+            { id: 'other', ja: 'その他', en: 'Other', icon: 'star_border' }
+        ];
+
+        let silkLocationCounter = 0;
+
+        // Toggle sticker inputs based on shape
+        function toggleStickerInputs() {
+            const shape = document.getElementById('sticker-shape').value;
+            const groupWidth = document.getElementById('sticker-group-width');
+            const groupHeight = document.getElementById('sticker-group-height');
+            const groupDia = document.getElementById('sticker-group-dia');
+            const otherInput = document.getElementById('sticker-other-input');
+
+            if (shape === 'circle') {
+                groupWidth.classList.add('hidden');
+                groupHeight.classList.add('hidden');
+                groupDia.classList.remove('hidden');
+                otherInput.classList.add('hidden');
+            } else if (shape === 'square') {
+                groupWidth.classList.remove('hidden');
+                groupHeight.classList.remove('hidden');
+                groupDia.classList.add('hidden');
+                otherInput.classList.add('hidden');
+            } else if (shape === 'other') {
+                groupWidth.classList.remove('hidden');
+                groupHeight.classList.remove('hidden');
+                groupDia.classList.add('hidden');
+                otherInput.classList.remove('hidden');
+            }
+        }
+
+        // Render sticker shape cards
+        function renderStickerShapeCards() {
+            const container = document.getElementById('sticker-shape-container');
+            if (!container) return;
+
+            const currentShape = document.getElementById('sticker-shape').value;
+            container.innerHTML = '';
+
+            stickerShapeOptions.forEach((option) => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'group flex flex-col items-center justify-center p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-400 hover:shadow-lg transition-all duration-200 cursor-pointer';
+                card.dataset.shapeId = option.id;
+
+                const label = currentLang === 'ja' ? option.ja : option.en;
+                const isSelected = currentShape === option.id;
+                const iconColorClass = isSelected ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-500';
+
+                card.innerHTML = `
+                    <span class="material-icons text-5xl mb-2 transition-colors ${iconColorClass}">${option.icon}</span>
+                    <div class="text-xs font-bold text-gray-700 text-center uppercase tracking-tight">${label}</div>
+                `;
+
+                card.onclick = () => selectStickerShape(option.id);
+
+                // Highlight if selected
+                if (isSelected) {
+                    card.classList.remove('border-gray-200', 'bg-white');
+                    card.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200', 'shadow-md');
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        function selectStickerShape(shapeId) {
+            document.getElementById('sticker-shape').value = shapeId;
+            renderStickerShapeCards();
+            toggleStickerInputs();
+            calculateTotal();
+            checkDesignProgress();
+        }
+
+        function updateFileName(input) {
+            const display = document.getElementById('file-name-display');
+            if (input.files && input.files.length > 0) {
+                display.textContent = input.files[0].name;
+            } else {
+                display.textContent = '';
+            }
+        }
+
+        window.onload = () => {
+            renderCategoryBubbles();
+            renderServiceBubbles();
+            updateServiceOptions();
+            updateUI();
+            calculateTotal();
+        };
+
+        // Render category selection bubbles
+        function renderCategoryBubbles() {
+            const container = document.getElementById('category-bubbles');
+            const currentCategory = document.getElementById('category').value;
+            container.innerHTML = '';
+
+            categoryOptions.forEach((category) => {
+                const bubble = document.createElement('button');
+                bubble.type = 'button';
+                bubble.className = 'category-bubble relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-gray-300 bg-white hover:border-green-400 hover:shadow-lg transition-all duration-200 cursor-pointer';
+                bubble.dataset.categoryId = category.id;
+
+                const label = currentLang === 'ja' ? category.ja : category.en;
+                const description = currentLang === 'ja' ? category.description_ja : category.description_en;
+
+                bubble.innerHTML = `
+                <div class="text-5xl mb-3">${category.icon}</div>
+                <div class="text-sm font-bold text-gray-800 text-center mb-1">${label}</div>
+                <div class="text-xs text-gray-600 text-center">${description}</div>
+            `;
+
+                bubble.onclick = () => selectCategory(category.id);
+
+                // Highlight if selected
+                if (currentCategory === category.id) {
+                    bubble.classList.remove('border-gray-300', 'bg-white');
+                    bubble.classList.add('border-green-500', 'bg-green-50', 'ring-2', 'ring-green-200', 'shadow-lg');
+                }
+
+                container.appendChild(bubble);
+            });
+        }
+
+        // Select a category
+        function selectCategory(categoryId) {
+            // Update hidden input
+            document.getElementById('category').value = categoryId;
+
+            // Update visual selection
+            document.querySelectorAll('.category-bubble').forEach(bubble => {
+                if (bubble.dataset.categoryId === categoryId) {
+                    bubble.classList.remove('border-gray-300', 'bg-white');
+                    bubble.classList.add('border-green-500', 'bg-green-50', 'ring-2', 'ring-green-200', 'shadow-lg');
+                } else {
+                    bubble.classList.remove('border-green-500', 'bg-green-50', 'ring-2', 'ring-green-200', 'shadow-lg');
+                    bubble.classList.add('border-gray-300', 'bg-white');
+                }
+            });
+
+            // Show service selection section and render filtered services
+            document.getElementById('service-selection-section').classList.remove('hidden');
+            renderServiceBubbles();
+
+            // Clear any previous service selection (progressive reveal)
+            document.getElementById('method').value = '';
+            document.getElementById('design-info-section').classList.add('hidden');
+            document.getElementById('quantity-section').classList.add('hidden');
+            document.getElementById('items-selection-section').classList.add('hidden');
+            document.getElementById('customer-info-section').classList.add('hidden');
+            document.getElementById('secondary-service-section').classList.add('hidden');
+        }
+
+        function addSilkLocation() {
+            silkLocationCounter++;
+            const locationId = `silk-loc-${silkLocationCounter}`;
+            const container = document.getElementById('silk-locations-list');
+
+            const locationMap = {
+                'left-chest': { ja: '左胸', en: 'Left Chest' },
+                'right-chest': { ja: '右胸', en: 'Right Chest' },
+                'front-overall': { ja: '全面', en: 'Front Overall' },
+                'back-overall': { ja: '背面全体', en: 'Back Overall' },
+                'left-sleeve': { ja: '左袖', en: 'Left Sleeve' },
+                'right-sleeve': { ja: '右袖', en: 'Right Sleeve' },
+                'back-neck': { ja: 'バックネック', en: 'Back Neck' },
+                'undecided': { ja: '未定（色数のみ）', en: 'Undecided (Colors only)' },
+                'other': { ja: 'その他（カスタム）', en: 'Other (Custom)' }
+            };
+
+            const locationCard = document.createElement('div');
+            locationCard.className = 'silk-location-item border border-gray-300 rounded-lg p-4 bg-gray-50';
+            locationCard.id = locationId;
+
+            const colorsLabel = currentLang === 'ja' ? '色数' : 'Colors';
+            const otherPlaceholder = currentLang === 'ja' ? '位置を入力してください' : 'Enter location';
+
+            let optionsHTML = '<option value="">' + (currentLang === 'ja' ? '位置を選択' : 'Select location') + '</option>';
+            for (const [key, value] of Object.entries(locationMap)) {
+                const label = currentLang === 'ja' ? value.ja : value.en;
+                // PRE-SELECT 'left-chest' BY DEFAULT
+                const isSelected = (key === 'left-chest') ? 'selected' : '';
+                optionsHTML += `<option value="${key}" ${isSelected}>${label}</option>`;
+            }
+
+            locationCard.innerHTML = `
+            <div class="flex gap-3 items-start">
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1" data-i18n="label_locations">${currentLang === 'ja' ? 'プリント位置' : 'Print Location'}</label>
+                        <select class="silk-location-select w-full border-gray-300 border rounded-md p-2 text-sm" onchange="toggleOtherInput('${locationId}'); updateSilkSummary();" oninput="toggleOtherInput('${locationId}'); updateSilkSummary();">
+                            ${optionsHTML}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1" data-i18n="colors_label">${colorsLabel}</label>
+                        <select class="silk-colors-select w-full border-gray-300 border rounded-md p-2 text-sm bg-yellow-50" onchange="updateSilkSummary();" oninput="updateSilkSummary();">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" onclick="removeSilkLocation('${locationId}')" class="mt-6 text-red-500 hover:text-red-700 transition">
+                    <span class="material-icons text-xl">delete_outline</span>
+                </button>
+            </div>
+            <div class="silk-other-input hidden mt-3">
+                <input type="text" class="silk-other-text w-full border-gray-300 border rounded-md p-2 text-sm" placeholder="${otherPlaceholder}" oninput="updateSilkSummary()">
+            </div>
+        `;
+
+            container.appendChild(locationCard);
+            updateSilkSummary();
+        }
+
+        function toggleOtherInput(locationId) {
+            const card = document.getElementById(locationId);
+            const select = card.querySelector('.silk-location-select');
+            const otherInput = card.querySelector('.silk-other-input');
+
+            if (select.value === 'other') {
+                otherInput.classList.remove('hidden');
+            } else {
+                otherInput.classList.add('hidden');
+            }
+        }
+
+        function removeSilkLocation(locationId) {
+            const card = document.getElementById(locationId);
+            if (card) {
+                card.remove();
+                updateSilkSummary();
+            }
+        }
+
+        function updateSilkSummary() {
+            const locations = document.querySelectorAll('#silk-locations-list > div');
+            const summaryContent = document.getElementById('silk-summary-content');
+            const summaryBox = document.getElementById('silk-design-summary');
+            const dataField = document.getElementById('silk-locations-data');
+            const colorsField = document.getElementById('colors');
+
+            if (locations.length === 0) {
+                summaryBox.classList.add('hidden');
+                dataField.value = '';
+                colorsField.value = '';
+                calculateTotal();
+                return;
+            }
+
+            const locationMap = {
+                'left-chest': { ja: '左胸', en: 'Left Chest' },
+                'right-chest': { ja: '右胸', en: 'Right Chest' },
+                'front-overall': { ja: '全面', en: 'Front Overall' },
+                'back-overall': { ja: '背面全体', en: 'Back Overall' },
+                'left-sleeve': { ja: '左袖', en: 'Left Sleeve' },
+                'right-sleeve': { ja: '右袖', en: 'Right Sleeve' },
+                'back-neck': { ja: 'バックネック', en: 'Back Neck' },
+                'undecided': { ja: '未定', en: 'Undecided' },
+                'other': { ja: 'その他', en: 'Other' }
+            };
+
+            let summaryHTML = '';
+            let dataArray = [];
+            let maxColors = 0;
+
+            locations.forEach((card) => {
+                const locationSelect = card.querySelector('.silk-location-select');
+                const colorsSelect = card.querySelector('.silk-colors-select');
+                const otherText = card.querySelector('.silk-other-text');
+
+                const locationValue = locationSelect.value;
+                const colors = parseInt(colorsSelect.value) || 1;
+
+                if (locationValue) {
+                    let locationLabel = '';
+                    if (locationValue === 'other' && otherText && otherText.value.trim()) {
+                        locationLabel = otherText.value.trim();
+                    } else if (locationMap[locationValue]) {
+                        locationLabel = currentLang === 'ja' ? locationMap[locationValue].ja : locationMap[locationValue].en;
+                    }
+
+                    if (locationLabel) {
+                        const colorLabel = currentLang === 'ja' ? '色' : (colors > 1 ? 'colors' : 'color');
+                        summaryHTML += `<div>• ${locationLabel}: ${colors}${colorLabel}</div>`;
+                        dataArray.push(`${locationLabel}:${colors}`);
+                        maxColors = Math.max(maxColors, colors);
+                    }
+                }
+            });
+
+            if (summaryHTML) {
+                summaryContent.innerHTML = summaryHTML;
+                summaryBox.classList.remove('hidden');
+                dataField.value = dataArray.join(' | ');
+                colorsField.value = maxColors;
+            } else {
+                summaryBox.classList.add('hidden');
+                dataField.value = '';
+                colorsField.value = '';
+            }
+
+            calculateTotal();
+            checkDesignProgress(); // Check if design is complete to show next step
+        }
+
+        // Check if design info is complete and show quantity section progressively
+        function checkDesignProgress() {
+            const method = document.getElementById('method').value;
+            if (!method) return;
+
+            let designComplete = false;
+
+            if (method === 'silk') {
+                // Silk screen: show Step 4 as soon as location card exists (colors default to 1)
+                const locations = document.querySelectorAll('.silk-location-item');
+                designComplete = (locations.length > 0);
+            } else if (method === 'dtf') {
+                // DTF: size and locations must be selected
+                const size = document.getElementById('dtf-size').value;
+                const locations = document.getElementById('dtf-locations').value;
+                designComplete = (size && locations);
+            } else if (method === 'embroidery') {
+                // Embroidery: need target, width, and height
+                const target = document.getElementById('emb-target').value;
+                const width = document.getElementById('emb-width').value;
+                const height = document.getElementById('emb-height').value;
+                designComplete = (target && width && height);
+            } else if (method === 'sublimation') {
+                // Sublimation: need style selected
+                const style = document.getElementById('sublimation-style').value;
+                designComplete = !!style;
+            } else if (method === 'sticker') {
+                // Sticker: need shape and dimensions (finish is now in Step 5)
+                const shape = document.getElementById('sticker-shape').value;
+
+                let dimensionsValid = false;
+                if (shape === 'circle') {
+                    const diameter = parseFloat(document.getElementById('sticker-diameter').value);
+                    dimensionsValid = !isNaN(diameter) && diameter > 0;
+                } else if (shape === 'square' || shape === 'other') {
+                    const width = parseFloat(document.getElementById('sticker-width').value);
+                    const height = parseFloat(document.getElementById('sticker-height').value);
+                    dimensionsValid = !isNaN(width) && width > 0 && !isNaN(height) && height > 0;
+                }
+
+                designComplete = (shape && dimensionsValid);
+            } else if (method === 'banner') {
+                // Banner: need width, length, and base color
+                const width = parseFloat(document.getElementById('banner-width').value);
+                const length = parseFloat(document.getElementById('banner-length').value);
+                const baseColor = document.getElementById('banner-base-color').value;
+                designComplete = (!isNaN(width) && width > 0 && !isNaN(length) && length > 0 && baseColor);
+            } else {
+                // For other services (flag, uv), design section is minimal
+                designComplete = true;
+            }
+
+            // Show quantity section if design is complete
+            if (designComplete) {
+                document.getElementById('quantity-section').classList.remove('hidden');
+            } else {
+                document.getElementById('quantity-section').classList.add('hidden');
+            }
+        }
+
+        function renderServiceBubbles() {
+            const container = document.getElementById('service-bubbles');
+            const currentMethod = document.getElementById('method').value;
+            const currentCategory = document.getElementById('category').value;
+            container.innerHTML = '';
+
+            // Don't render if no category is selected
+            if (!currentCategory) return;
+
+            // Filter services by category
+            const filteredServices = serviceOptions.filter(s => s.category === currentCategory);
+
+            filteredServices.forEach((service, idx) => {
+                const bubble = document.createElement('button');
+                bubble.type = 'button';
+                bubble.className = 'service-bubble relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-gray-300 bg-white hover:border-blue-400 hover:shadow-md transition-all duration-200 cursor-pointer';
+                bubble.dataset.serviceId = service.id;
+
+                const label = currentLang === 'ja' ? service.ja : service.en;
+
+                // Check if coming soon
+                const comingSoonBadge = service.comingSoon ? `
+                    <div class="absolute -top-2 -right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                        ${currentLang === 'ja' ? '近日公開' : 'Coming Soon'}
+                    </div>
+                ` : '';
+
+                bubble.innerHTML = `
+                ${comingSoonBadge}
+                <div class="text-3xl mb-2">${service.icon}</div>
+                <div class="text-xs font-medium text-gray-700 text-center whitespace-nowrap">${label}</div>
+            `;
+
+                // Disable coming soon services
+                if (service.comingSoon) {
+                    bubble.classList.add('opacity-60', 'cursor-not-allowed');
+                    bubble.classList.remove('hover:border-blue-400', 'hover:shadow-md');
+                    bubble.onclick = (e) => {
+                        e.preventDefault();
+                        alert(currentLang === 'ja' ? 'このサービスは近日公開予定です。' : 'This service is coming soon.');
+                    };
+                } else {
+                    bubble.onclick = () => selectService(service.id);
+                }
+
+                // Highlight if this is the current selection
+                if (currentMethod === service.id) {
+                    bubble.classList.remove('border-gray-300', 'bg-white');
+                    bubble.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200', 'shadow-lg');
+                }
+
+                container.appendChild(bubble);
+            });
+        }
+
+        function selectService(serviceId) {
+            // Update hidden input
+            document.getElementById('method').value = serviceId;
+
+            // Update visual selection
+            document.querySelectorAll('.service-bubble').forEach(bubble => {
+                if (bubble.dataset.serviceId === serviceId) {
+                    bubble.classList.remove('border-gray-300', 'bg-white');
+                    bubble.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200', 'shadow-lg');
+                } else {
+                    bubble.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-200', 'shadow-lg');
+                    bubble.classList.add('border-gray-300', 'bg-white');
+                }
+            });
+
+            // RESET all subsequent steps when service changes
+            resetFromStep3();
+
+            // Show ONLY design info section (progressive reveal)
+            document.getElementById('design-info-section').classList.remove('hidden');
+
+            // Trigger updates
+            updateServiceOptions();
+            calculateTotal();
+        }
+
+        // Reset form from Step 3 onwards when service method changes
+        function resetFromStep3() {
+            // Hide all sections after Step 2
+            document.getElementById('quantity-section').classList.add('hidden');
+            document.getElementById('items-selection-section').classList.add('hidden');
+            document.getElementById('finishing-options-section').classList.add('hidden');
+            document.getElementById('secondary-service-section').classList.add('hidden');
+            document.getElementById('customer-info-section').classList.add('hidden');
+
+            // Clear quantity
+            document.getElementById('total-quantity').value = '';
+
+            // Clear garment selections
+            document.querySelectorAll('.garment-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+            document.querySelectorAll('[id^="garment-qty-"]').forEach(input => {
+                input.value = 0;
+                input.parentElement.classList.add('hidden');
+            });
+
+            // Clear design inputs
+            // Silk screen
+            const silkLocationsList = document.getElementById('silk-locations-list');
+            if (silkLocationsList) {
+                silkLocationsList.innerHTML = '';
+                silkLocationCounter = 0;
+            }
+
+            // DTF
+            document.getElementById('dtf-size').value = 'standard';
+            document.getElementById('dtf-locations').value = '1';
+
+            // Embroidery
+            document.getElementById('emb-width').value = '';
+            document.getElementById('emb-height').value = '';
+            document.getElementById('emb-unit').value = 'cm';
+
+            // Sticker
+            document.getElementById('sticker-shape').value = 'square';
+            document.getElementById('sticker-width').value = '';
+            document.getElementById('sticker-height').value = '';
+            document.getElementById('sticker-diameter').value = '';
+            document.getElementById('sticker-unit').value = 'cm';
+            document.getElementById('sticker-finish').value = 'none';
+            
+            // Clear sticker error message
+            const stickerError = document.getElementById('sticker-size-error');
+            if (stickerError) {
+                stickerError.classList.add('hidden');
+                stickerError.innerText = '';
+            }
+
+            // Banner
+            document.getElementById('banner-width').value = '';
+            document.getElementById('banner-length').value = '';
+            document.getElementById('banner-base-color').value = '';
+            document.getElementById('banner-twill').checked = false;
+            document.getElementById('banner-extra-thick').checked = false;
+            document.getElementById('banner-double-sided').checked = false;
+
+            // Sublimation
+            const subContainer = document.getElementById('sublimation-styles');
+            if (subContainer) {
+                subContainer.dataset.selectedStyleId = '';
+                document.querySelectorAll('#sublimation-styles button').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-blue-500');
+                });
+            }
+
+            // Clear secondary service
+            document.getElementById('add-secondary-service').checked = false;
+            document.getElementById('secondary-service-options').classList.add('hidden');
+        }
+
+        // Get compatible secondary services based on primary service
+        function getCompatibleServices(primaryService) {
+            const combinable = ['silk', 'dtf', 'embroidery'];
+            if (combinable.includes(primaryService)) {
+                return combinable.filter(s => s !== primaryService);
+            }
+            return []; // Solo services return empty array
+        }
+
+        // Update garment options based on selected service
+        function updateGarmentOptions() {
+            const method = document.getElementById('method').value;
+            const container = document.getElementById('garment-selection');
+            container.innerHTML = '';
+
+            // Don't update if no method is selected yet
+            if (!method) return;
+
+            // All garments available for all services (per user specification)
+            const allGarments = [];
+            for (const cat in itemsData) {
+                itemsData[cat].items.forEach(item => {
+                    allGarments.push({
+                        nameJa: item.nameJa,
+                        nameEn: item.nameEn,
+                        priceJP: item.priceJP,
+                        priceUS: item.priceUS,
+                        silkUpchargeJP: item.silkUpchargeJP || 0,
+                        silkUpchargeUS: item.silkUpchargeUS || 0,
+                        isBasic: item.isBasic || false,
+                        category: cat,
+                        categoryLabel: currentLang === 'ja' ? itemsData[cat].ja : itemsData[cat].en
+                    });
+                });
+            }
+
+            allGarments.forEach((garment, idx) => {
+                const garmentCard = document.createElement('div');
+                garmentCard.className = 'border border-gray-300 rounded-lg p-4 bg-gray-50';
+                const garmentName = currentLang === 'ja' ? garment.nameJa : garment.nameEn;
+                const unitLabel = currentLang === 'ja' ? '枚' : 'pc';
+                const qtyLabel = currentLang === 'ja' ? '数量' : 'Quantity';
+
+                garmentCard.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" id="garment-${idx}" class="garment-checkbox mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" onchange="toggleGarmentQuantity(${idx}); calculateTotal()">
+                    <div class="flex-1">
+                        <label for="garment-${idx}" class="font-medium text-gray-800 cursor-pointer">${garmentName}</label>
+                        <div class="text-xs text-gray-500 mt-1">${garment.categoryLabel}</div>
+                        <div class="mt-2 garment-qty-input hidden">
+                            <label class="block text-xs text-gray-600 mb-1">${qtyLabel}</label>
+                            <input type="number" id="garment-qty-${idx}" min="0" value="0" oninput="validateQuantities(); calculateTotal()" class="w-full border-gray-300 border rounded p-2 text-sm" data-garment-name="${garmentName}" data-price-jp="${garment.priceJP}" data-price-us="${garment.priceUS}" data-silk-upcharge-jp="${garment.silkUpchargeJP || 0}" data-silk-upcharge-us="${garment.silkUpchargeUS || 0}" data-is-basic="${garment.isBasic || false}">
+                        </div>
+                    </div>
+                </div>
+            `;
+                container.appendChild(garmentCard);
+            });
+        }
+
+        // Toggle quantity input visibility when garment checkbox is checked
+        function toggleGarmentQuantity(idx) {
+            const checkbox = document.getElementById(`garment-${idx}`);
+            const qtyInput = document.getElementById(`garment-qty-${idx}`);
+            const qtyContainer = qtyInput.parentElement;
+
+            if (checkbox.checked) {
+                qtyContainer.classList.remove('hidden');
+                qtyInput.value = 1;
+            } else {
+                qtyContainer.classList.add('hidden');
+                qtyInput.value = 0;
+            }
+            validateQuantities();
+        }
+
+        // Validate that garment quantities sum to total quantity
+        function validateQuantities() {
+            const totalQty = parseInt(document.getElementById('total-quantity').value) || 0;
+            const category = document.getElementById('category').value;
+
+            // Show appropriate section based on category when quantity is entered
+            if (totalQty > 0) {
+                if (category === 'garment') {
+                    // Show garment selection for garments
+                    document.getElementById('items-selection-section').classList.remove('hidden');
+                    document.getElementById('finishing-options-section').classList.add('hidden');
+                } else if (category === 'items') {
+                    // Show finishing options for items
+                    document.getElementById('finishing-options-section').classList.remove('hidden');
+                    document.getElementById('items-selection-section').classList.add('hidden');
+                    updateFinishingOptions();
+                    // For items, show customer info immediately after quantity
+                    document.getElementById('customer-info-section').classList.remove('hidden');
+                    document.getElementById('secondary-service-section').classList.remove('hidden');
+                }
+            }
+
+            // Only validate garment quantities if in garment category
+            if (category === 'garment') {
+                const garmentQtyInputs = document.querySelectorAll('[id^="garment-qty-"]');
+                let sumQty = 0;
+                let hasSelectedItems = false;
+
+                garmentQtyInputs.forEach(input => {
+                    const qty = parseInt(input.value) || 0;
+                    sumQty += qty;
+                    if (qty > 0) hasSelectedItems = true;
+                });
+
+                const alert = document.getElementById('quantity-alert');
+                if (sumQty !== totalQty && sumQty > 0) {
+                    alert.classList.remove('hidden');
+                } else {
+                    alert.classList.add('hidden');
+                }
+
+                // Show customer info section when items are selected with quantities
+                if (hasSelectedItems && sumQty === totalQty) {
+                    document.getElementById('customer-info-section').classList.remove('hidden');
+                    // Also show secondary service section
+                    document.getElementById('secondary-service-section').classList.remove('hidden');
+                }
+            }
+        }
+
+        // Update secondary service options based on primary service
+        function updateSecondaryServiceOptions() {
+            const primaryMethod = document.getElementById('method').value;
+            const compatible = getCompatibleServices(primaryMethod);
+            const section = document.getElementById('secondary-service-section');
+
+            // Don't show secondary service section automatically on load
+            // It will be shown by validateQuantities() when user completes item selection
+            if (compatible.length === 0) {
+                section.classList.add('hidden');
+                document.getElementById('add-secondary-service').checked = false;
+                document.getElementById('secondary-service-options').classList.add('hidden');
+            }
+
+            // Populate secondary service dropdown
+            const select = document.getElementById('secondary-method');
+            const currentValue = select.value;
+            select.innerHTML = '';
+            compatible.forEach(service => {
+                const opt = document.createElement('option');
+                opt.value = service;
+                const serviceOption = serviceOptions.find(s => s.id === service);
+                if (serviceOption) {
+                    opt.text = currentLang === 'ja' ? serviceOption.ja : serviceOption.en;
+                }
+                select.add(opt);
+            });
+            // Restore previous selection if it's still valid
+            if (currentValue && compatible.includes(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        // Update finishing options based on selected service method
+        function updateFinishingOptions() {
+            const method = document.getElementById('method').value;
+            
+            // Hide all finishing option sections
+            document.getElementById('finishing-embroidery').classList.add('hidden');
+            document.getElementById('finishing-uv').classList.add('hidden');
+            document.getElementById('finishing-sticker').classList.add('hidden');
+            document.getElementById('finishing-banner').classList.add('hidden');
+            document.getElementById('finishing-flag').classList.add('hidden');
+
+            // Show appropriate finishing options based on service
+            if (method === 'embroidery') {
+                document.getElementById('finishing-embroidery').classList.remove('hidden');
+            } else if (method === 'uv') {
+                document.getElementById('finishing-uv').classList.remove('hidden');
+            } else if (method === 'sticker') {
+                document.getElementById('finishing-sticker').classList.remove('hidden');
+            } else if (method === 'banner') {
+                document.getElementById('finishing-banner').classList.remove('hidden');
+            } else if (method === 'flag') {
+                document.getElementById('finishing-flag').classList.remove('hidden');
+            }
+        }
+
+        // Toggle secondary service options visibility
+        function toggleSecondaryService() {
+            const checkbox = document.getElementById('add-secondary-service');
+            const options = document.getElementById('secondary-service-options');
+
+            if (checkbox.checked) {
+                options.classList.remove('hidden');
+                updateSecondaryDesignOptions();
+            } else {
+                options.classList.add('hidden');
+            }
+            calculateTotal();
+        }
+
+        // Update secondary service design options based on selected secondary service
+        function updateSecondaryDesignOptions() {
+            const secondaryMethod = document.getElementById('secondary-method').value;
+            const colorSec = document.getElementById('secondary-color-section');
+            const dtfSec = document.getElementById('secondary-dtf-section');
+            const embSec = document.getElementById('secondary-emb-section');
+
+            colorSec.classList.add('hidden');
+            dtfSec.classList.add('hidden');
+            embSec.classList.add('hidden');
+
+            if (secondaryMethod === 'silk') {
+                colorSec.classList.remove('hidden');
+            } else if (secondaryMethod === 'dtf') {
+                dtfSec.classList.remove('hidden');
+            } else if (secondaryMethod === 'embroidery') {
+                embSec.classList.remove('hidden');
+            }
+        }
+
+        // Calculate cost for a specific service
+        function calculateServiceCost(service, options, qty, currency) {
+            if (service === 'silk') {
+                const colors = options.colors || 1;
+                const silkUnitPrice = getSilkPricePerGarment(colors, qty, currency);
+                return silkUnitPrice ? silkUnitPrice * qty : 0;
+            } else if (service === 'dtf') {
+                const sizeId = options.sizeId || 'standard';
+                const locations = options.locations || 1;
+                const baseUnit = getDtfUnitPricePerGarment(sizeId, qty, currency);
+                if (baseUnit) {
+                    const extraLocations = Math.max(0, locations - 1);
+                    const extraPerLocation = sizeId === 'oversize'
+                        ? (currency === 'JPY' ? 500 : 5.00)
+                        : (currency === 'JPY' ? 300 : 3.00);
+                    const extraUnit = extraLocations * extraPerLocation;
+                    const unitTotal = baseUnit + extraUnit;
+                    return unitTotal * qty;
+                }
+                return 0;
+            } else if (service === 'embroidery') {
+                const width = options.width || 0;
+                const height = options.height || 0;
+                const unitType = options.unit || 'cm';
+                let widthCm = width;
+                let heightCm = height;
+                if (unitType === 'inch') {
+                    widthCm = width * 2.54;
+                    heightCm = height * 2.54;
+                }
+                const areaCm2 = widthCm * heightCm;
+                const embUnit = getEmbUnitPricePerPiece(areaCm2, qty, currency);
+                if (embUnit) {
+                    const target = options.target || 'garment';
+                    let unitPrice = embUnit;
+                    if (target === 'garment') {
+                        unitPrice += currency === 'JPY' ? 540 : 5.40;
+                    } else if (target === 'patch') {
+                        const patchOpt = options.patchOption || 'none';
+                        if (patchOpt === 'iron') {
+                            unitPrice += currency === 'JPY' ? 100 : 1.00;
+                        } else if (patchOpt === 'velcro') {
+                            unitPrice += currency === 'JPY' ? 200 : 2.00;
+                        }
+                    }
+                    return unitPrice * qty;
+                }
+                return 0;
+            } else if (service === 'sublimation') {
+                const baseUnit = getSublimationBaseUnitPrice(qty, currency);
+                const styleId = options.styleId;
+                const style = styleId ? sublimationStyles.find(s => s.id === styleId) : null;
+                const adj = style
+                    ? (currency === 'JPY' ? style.adjJPY : style.adjUSD)
+                    : 0;
+                if (baseUnit) {
+                    const unitPrice = baseUnit + adj;
+                    return unitPrice * qty;
+                }
+                return 0;
+            } else if (service === 'sticker') {
+                const sizeId = options.sizeId || 's1';
+                const finishId = options.finishId || 'none';
+                const unitPrice = getStickerUnitPrice(sizeId, finishId, qty, currency);
+                if (unitPrice !== null) {
+                    return unitPrice * qty;
+                }
+                return 0;
+            } else {
+                const methodData = methodCosts[service];
+                if (!methodData) return 0;
+                let baseFee = currency === 'JPY' ? methodData.baseJP : methodData.baseUS;
+                let unitPrintFee = currency === 'JPY' ? methodData.unitJP : methodData.unitUS;
+                return baseFee + (unitPrintFee * qty);
+            }
+        }
+
+        function getSilkQtyTierId(qty, currency) {
+            const matrix = silkScreenMatrix[currency] || silkScreenMatrix["JPY"];
+            const tier = matrix.qtyTiers.find(t => qty >= t.min && (typeof t.max === "undefined" || qty <= t.max));
+            return tier ? tier.id : null;
+        }
+        function getSilkPricePerGarment(colors, qty, currency) {
+            const matrix = silkScreenMatrix[currency] || silkScreenMatrix["JPY"];
+            const tierId = getSilkQtyTierId(qty, currency);
+            if (!tierId) return null;
+            const row = matrix.rows.find(r => r.screens === colors);
+            if (!row) return null;
+            const price = row.unitPrices[tierId];
+            return typeof price === "number" ? price : null;
+        }
+
+        function getDtfQtyTierId(qty, currency) {
+            const matrix = dtfMatrix[currency] || dtfMatrix["JPY"];
+            const tier = matrix.qtyTiers.find(t => qty >= t.min && (typeof t.max === "undefined" || qty <= t.max));
+            return tier ? tier.id : null;
+        }
+        function getDtfUnitPricePerGarment(sizeId, qty, currency) {
+            const matrix = dtfMatrix[currency] || dtfMatrix["JPY"];
+            const tierId = getDtfQtyTierId(qty, currency);
+            if (!tierId) return null;
+            const row = matrix.rows.find(r => r.sizeId === sizeId);
+            if (!row) return null;
+            const price = row.unitPrices[tierId];
+            return typeof price === "number" ? price : null;
+        }
+
+        function getEmbQtyTierId(qty, currency) {
+            const matrix = embroideryMatrix[currency] || embroideryMatrix["JPY"];
+            const tier = matrix.qtyTiers.find(t => qty >= t.min && (typeof t.max === "undefined" || qty <= t.max));
+            return tier ? tier.id : null;
+        }
+        function getEmbSizeRow(areaCm2, currency) {
+            const matrix = embroideryMatrix[currency] || embroideryMatrix["JPY"];
+            return matrix.rows.find(r => areaCm2 >= r.minArea && areaCm2 <= r.maxArea) || null;
+        }
+        function getEmbUnitPricePerPiece(areaCm2, qty, currency) {
+            const tierId = getEmbQtyTierId(qty, currency);
+            if (!tierId || tierId === "100+") return null; // 100+ is ご相談
+            const row = getEmbSizeRow(areaCm2, currency);
+            if (!row) return null;
+            const price = row.unitPrices[tierId];
+            return typeof price === "number" ? price : null;
+        }
+
+        function getSublimationQtyTierId(qty, currency) {
+            const matrix = sublimationBaseMatrix[currency] || sublimationBaseMatrix["JPY"];
+            const tier = matrix.qtyTiers.find(t => qty >= t.min && (typeof t.max === "undefined" || qty <= t.max));
+            return tier ? tier.id : null;
+        }
+        function getSublimationBaseUnitPrice(qty, currency) {
+            const matrix = sublimationBaseMatrix[currency] || sublimationBaseMatrix["JPY"];
+            const tierId = getSublimationQtyTierId(qty, currency);
+            if (!tierId) return null;
+            const price = matrix.unitPrices[tierId];
+            return typeof price === "number" ? price : null;
+        }
+
+        function getStickerQtyTierId(qty, currency) {
+            const matrix = stickerMatrix[currency] || stickerMatrix["JPY"];
+            // Default to first tier if below min (e.g. < 50)
+            if (qty < 50) return "50-199";
+            const tier = matrix.qtyTiers.find(t => qty >= t.min && (typeof t.max === "undefined" || qty <= t.max));
+            return tier ? tier.id : "200+";
+        }
+
+        function getStickerUnitPrice(sizeId, finishId, qty, currency) {
+            const matrix = stickerMatrix[currency] || stickerMatrix["JPY"];
+            const tierId = getStickerQtyTierId(qty, currency);
+            const row = matrix.rows.find(r => r.sizeId === sizeId);
+            if (!row) return null;
+            const finishPrices = row.unitPrices[finishId];
+            if (!finishPrices) return null;
+            return finishPrices[tierId];
+        }
+
+        function getBannerPrice(widthCm, lengthCm, baseColor, currency) {
+            const pricing = bannerPricing[currency] || bannerPricing["JPY"];
+            
+            // Determine width bracket
+            const widthBracket = widthCm <= 90 ? "90" : "120";
+            
+            // Convert length from cm to meters and round to nearest 0.5m increment
+            const lengthM = lengthCm / 100;
+            
+            // Round to nearest 0.5m (e.g., 2.3m -> 2.5m, 2.1m -> 2.0m)
+            let roundedLength = Math.round(lengthM * 2) / 2;
+            
+            // Clamp to available range (1.0m to 5.0m)
+            roundedLength = Math.max(1.0, Math.min(5.0, roundedLength));
+            
+            // Get price from matrix
+            if (pricing[widthBracket] && pricing[widthBracket][baseColor]) {
+                const price = pricing[widthBracket][baseColor][roundedLength.toFixed(1)];
+                return typeof price === "number" ? price : null;
+            }
+            return null;
+        }
+
+        function updateUI() {
+            currentLang = document.getElementById('lang-select').value;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (i18n[currentLang][key]) {
+                    el.innerHTML = i18n[currentLang][key];
+                }
+            });
+            renderCategoryBubbles();
+            renderServiceBubbles();
+            updateGarmentOptions();
+            renderSublimationStyles();
+            renderStickerShapeCards();
+            updateSecondaryServiceOptions();
+            updateDropdownOptions();
+            updateDropdownOptions();
+            refreshSilkLocationLabels();
+            updatePlaceholders();
+            calculateTotal();
+        }
+
+        function updatePlaceholders() {
+            // Update sticker dim placeholders
+            document.querySelectorAll('.sticker-dim-input').forEach(input => {
+                input.placeholder = currentLang === 'ja' ? '例：5' : 'Ex: 5';
+            });
+
+            // Update sticker description placeholder
+            const descInput = document.getElementById('sticker-shape-desc');
+            if (descInput) {
+                descInput.placeholder = currentLang === 'ja'
+                    ? '例：星形、ハート形、ロゴに沿ったカットなど...'
+                    : 'Ex: Star shape, Heart shape, contour cut around logo...';
+            }
+
+            // Update placeholder for 'Other' text inputs (Silk)
+            document.querySelectorAll('.silk-other-text').forEach(input => {
+                input.placeholder = currentLang === 'ja' ? '位置を入力してください' : 'Enter location';
+            });
+        }
+
+        function refreshSilkLocationLabels() {
+            const method = document.getElementById('method').value;
+            if (method !== 'silk') return;
+
+            const locationMap = {
+                'left-chest': { ja: '左胸', en: 'Left Chest' },
+                'right-chest': { ja: '右胸', en: 'Right Chest' },
+                'front-overall': { ja: '全面', en: 'Front Overall' },
+                'back-overall': { ja: '背面全体', en: 'Back Overall' },
+                'left-sleeve': { ja: '左袖', en: 'Left Sleeve' },
+                'right-sleeve': { ja: '右袖', en: 'Right Sleeve' },
+                'back-neck': { ja: 'バックネック', en: 'Back Neck' },
+                'undecided': { ja: '未定（色数のみ）', en: 'Undecided (Colors only)' },
+                'other': { ja: 'その他（カスタム）', en: 'Other (Custom)' }
+            };
+
+            // Update all location select dropdowns
+            document.querySelectorAll('.silk-location-select').forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">' + (currentLang === 'ja' ? '位置を選択' : 'Select location') + '</option>';
+
+                for (const [key, value] of Object.entries(locationMap)) {
+                    const label = currentLang === 'ja' ? value.ja : value.en;
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = label;
+                    if (key === currentValue) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                }
+            });
+
+            // Update placeholder for 'Other' text inputs
+            document.querySelectorAll('.silk-other-text').forEach(input => {
+                input.placeholder = currentLang === 'ja' ? '位置を入力してください' : 'Enter location';
+            });
+
+            updateSilkSummary();
+        }
+        function updateDropdownOptions() {
+            // Update color options
+            // Note: #colors is a hidden input, we don't need to update it here.
+
+            const secondaryColors = document.getElementById('secondary-colors');
+            if (secondaryColors) {
+                const secondaryColorsValue = secondaryColors.value;
+                secondaryColors.innerHTML = currentLang === 'ja'
+                    ? '<option value="1">1色</option><option value="2">2色</option><option value="3">3色</option><option value="4">4色以上</option>'
+                    : '<option value="1">1 Color</option><option value="2">2 Colors</option><option value="3">3 Colors</option><option value="4">4+ Colors</option>';
+                secondaryColors.value = secondaryColorsValue;
+            }
+
+            // Update DTF size options
+            const dtfSize = document.getElementById('dtf-size');
+            if (dtfSize) {
+                const dtfSizeValue = dtfSize.value;
+                dtfSize.innerHTML = currentLang === 'ja'
+                    ? '<option value="standard">30cm x 29cm 以内</option><option value="oversize">30cm x 29cm 以上</option>'
+                    : '<option value="standard">Within 30cm x 29cm</option><option value="oversize">Over 30cm x 29cm</option>';
+                dtfSize.value = dtfSizeValue;
+            }
+
+            const secondaryDtfSize = document.getElementById('secondary-dtf-size');
+            if (secondaryDtfSize) {
+                const secondaryDtfSizeValue = secondaryDtfSize.value;
+                secondaryDtfSize.innerHTML = currentLang === 'ja'
+                    ? '<option value="standard">30cm x 29cm 以内</option><option value="oversize">30cm x 29cm 以上</option>'
+                    : '<option value="standard">Within 30cm x 29cm</option><option value="oversize">Over 30cm x 29cm</option>';
+                secondaryDtfSize.value = secondaryDtfSizeValue;
+            }
+
+            // Update DTF locations
+            const dtfLocations = document.getElementById('dtf-locations');
+            if (dtfLocations) {
+                const dtfLocationsValue = dtfLocations.value;
+                dtfLocations.innerHTML = currentLang === 'ja'
+                    ? '<option value="1">1 箇所</option><option value="2">2 箇所</option><option value="3">3 箇所</option><option value="4">4 箇所</option>'
+                    : '<option value="1">1 Location</option><option value="2">2 Locations</option><option value="3">3 Locations</option><option value="4">4 Locations</option>';
+                dtfLocations.value = dtfLocationsValue;
+            }
+
+            const secondaryDtfLocations = document.getElementById('secondary-dtf-locations');
+            if (secondaryDtfLocations) {
+                const secondaryDtfLocationsValue = secondaryDtfLocations.value;
+                secondaryDtfLocations.innerHTML = currentLang === 'ja'
+                    ? '<option value="1">1 箇所</option><option value="2">2 箇所</option><option value="3">3 箇所</option><option value="4">4 箇所</option>'
+                    : '<option value="1">1 Location</option><option value="2">2 Locations</option><option value="3">3 Locations</option><option value="4">4 Locations</option>';
+                secondaryDtfLocations.value = secondaryDtfLocationsValue;
+            }
+
+            // Update embroidery target
+            const embTarget = document.getElementById('emb-target');
+            if (embTarget) {
+                const embTargetValue = embTarget.value;
+                embTarget.innerHTML = currentLang === 'ja'
+                    ? '<option value="garment">衣類に刺繍</option><option value="patch">ワッペン（パッチ）</option>'
+                    : '<option value="garment">Embroidery on Garment</option><option value="patch">Patch</option>';
+                embTarget.value = embTargetValue;
+            }
+
+            const secondaryEmbTarget = document.getElementById('secondary-emb-target');
+            if (secondaryEmbTarget) {
+                const secondaryEmbTargetValue = secondaryEmbTarget.value;
+                secondaryEmbTarget.innerHTML = currentLang === 'ja'
+                    ? '<option value="garment">衣類に刺繍</option><option value="patch">ワッペン（パッチ）</option>'
+                    : '<option value="garment">Embroidery on Garment</option><option value="patch">Patch</option>';
+                secondaryEmbTarget.value = secondaryEmbTargetValue;
+            }
+
+            // Update embroidery unit
+            const embUnit = document.getElementById('emb-unit');
+            if (embUnit) {
+                const embUnitValue = embUnit.value;
+                embUnit.innerHTML = currentLang === 'ja'
+                    ? '<option value="cm">cm</option><option value="inch">inch</option>'
+                    : '<option value="cm">cm</option><option value="inch">inch</option>';
+                embUnit.value = embUnitValue;
+            }
+
+            const secondaryEmbUnit = document.getElementById('secondary-emb-unit');
+            if (secondaryEmbUnit) {
+                const secondaryEmbUnitValue = secondaryEmbUnit.value;
+                secondaryEmbUnit.innerHTML = '<option value="cm">cm</option><option value="inch">inch</option>';
+                secondaryEmbUnit.value = secondaryEmbUnitValue;
+            }
+
+            // Update embroidery patch options
+            const embPatchOption = document.getElementById('emb-patch-option');
+            if (embPatchOption) {
+                const embPatchOptionValue = embPatchOption.value;
+                const currencySymbol = currentCurrency === 'JPY' ? '¥' : '$';
+                const ironPrice = currentCurrency === 'JPY' ? '100' : '1.00';
+                const velcroPrice = currentCurrency === 'JPY' ? '200' : '2.00';
+                const unitLabel = currentLang === 'ja' ? '枚' : 'pc';
+                embPatchOption.innerHTML = currentLang === 'ja'
+                    ? `<option value="none">なし</option><option value="iron">アイロンシート (+${currencySymbol}${ironPrice}/${unitLabel})</option><option value="velcro">ベルクロ (+${currencySymbol}${velcroPrice}/${unitLabel})</option>`
+                    : `<option value="none">None</option><option value="iron">Iron-on Sheet (+${currencySymbol}${ironPrice}/${unitLabel})</option><option value="velcro">Velcro (+${currencySymbol}${velcroPrice}/${unitLabel})</option>`;
+                embPatchOption.value = embPatchOptionValue;
+            }
+
+            // Update sticker Finish Option labels
+            const stickerFinish = document.getElementById('sticker-finish');
+            if (stickerFinish) {
+                const finishValue = stickerFinish.value;
+                stickerFinish.innerHTML = `
+                    <option value="none">${i18n[currentLang].finish_none}</option>
+                    <option value="lam">${i18n[currentLang].finish_lam}</option>
+                    <option value="app">${i18n[currentLang].finish_app}</option>
+                    <option value="lam_app">${i18n[currentLang].finish_lam_app}</option>
+                `;
+                stickerFinish.value = finishValue;
+            }
+        }
+
+        function renderSublimationStyles() {
+            const container = document.getElementById('sublimation-styles');
+            if (!container) return;
+            const selectedStyleId = container.dataset.selectedStyleId;
+            container.innerHTML = '';
+            sublimationStyles.forEach(style => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'w-full text-left border border-gray-300 rounded-lg p-3 bg-white hover:border-blue-500 hover:shadow-sm transition';
+                card.dataset.styleId = style.id;
+                const name = currentLang === 'ja' ? style.ja : style.en;
+
+                // Image path based on style ID (e.g., images/sublimation/8007.png)
+                const imagePath = `images/sublimation/${style.id}.png`;
+
+                card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="flex-shrink-0">
+                        <img src="${imagePath}" 
+                             alt="${name}" 
+                             class="w-16 h-16 object-contain rounded-md bg-gray-50 border border-gray-200"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="w-16 h-16 bg-gray-100 rounded-md border border-gray-200 items-center justify-center text-gray-400 text-xs hidden">
+                            <span class="material-icons text-2xl">image</span>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-semibold text-sm">${name}</div>
+                        <div class="text-xs text-gray-500">${style.id || ''}</div>
+                    </div>
+                </div>
+            `;
+                // Restore selection if it was previously selected
+                if (selectedStyleId && style.id === selectedStyleId) {
+                    card.classList.add('ring-2', 'ring-blue-500');
+                }
+                card.onclick = () => {
+                    document.querySelectorAll('#sublimation-styles button').forEach(btn => btn.classList.remove('ring-2', 'ring-blue-500'));
+                    card.classList.add('ring-2', 'ring-blue-500');
+                    card.dataset.selected = 'true';
+                    document.getElementById('sublimation-styles').dataset.selectedStyleId = style.id;
+                    calculateTotal();
+                    checkDesignProgress();
+                };
+                container.appendChild(card);
+            });
+        }
+        function updateServiceOptions() {
+            const method = document.getElementById('method').value;
+
+            // Don't update if no method is selected yet
+            if (!method) return;
+
+            const colorSec = document.getElementById('color-section');
+            const dtfSec = document.getElementById('dtf-section');
+            const embSec = document.getElementById('emb-section');
+            const embPatchOptions = document.getElementById('emb-patch-options');
+            const subSec = document.getElementById('sublimation-section');
+            const stickerSec = document.getElementById('sticker-section');
+            const bannerSec = document.getElementById('banner-section');
+
+            // Hide all design option sections first
+            colorSec.style.display = 'none';
+            colorSec.style.opacity = '0';
+            dtfSec.classList.add('hidden');
+            embSec.classList.add('hidden');
+            subSec.classList.add('hidden');
+            if (stickerSec) stickerSec.classList.add('hidden');
+            if (bannerSec) bannerSec.classList.add('hidden');
+
+            // Show relevant section based on service
+            if (method === 'silk') {
+                colorSec.style.display = 'block';
+                colorSec.style.opacity = '1';
+                // Add initial location if none exist
+                const existingLocations = document.querySelectorAll('#silk-locations-list > div');
+                if (existingLocations.length === 0) {
+                    addSilkLocation();
+                }
+            } else if (method === 'dtf') {
+                dtfSec.classList.remove('hidden');
+            } else if (method === 'embroidery') {
+                embSec.classList.remove('hidden');
+
+                // NEW LOGIC: Type box is ALWAYS hidden.
+                // If category is 'items', it's Patches. If 'garment', it's Direct.
+                const category = document.getElementById('category').value;
+                const targetSelect = document.getElementById('emb-target');
+                const targetLabel = document.querySelector('[data-i18n="label_emb_target"]');
+
+                // Hide target selector in UI
+                if (targetSelect) targetSelect.classList.add('hidden');
+                if (targetLabel) targetLabel.classList.add('hidden');
+
+                if (category === 'items') {
+                    // For Items: Force 'patch', SHOW patch options
+                    if (targetSelect) targetSelect.value = 'patch';
+                    embPatchOptions.classList.remove('hidden');
+                } else {
+                    // For Garments: Force 'garment', HIDE patch options
+                    if (targetSelect) targetSelect.value = 'garment';
+                    embPatchOptions.classList.add('hidden');
+                }
+            } else if (method === 'sublimation') {
+                subSec.classList.remove('hidden');
+                renderSublimationStyles();
+            } else if (method === 'sticker') {
+                if (stickerSec) {
+                    stickerSec.classList.remove('hidden');
+
+                    // Render sticker shapes and set initial state
+                    renderStickerShapeCards();
+                    toggleStickerInputs();
+
+                    // Update Finish Option labels
+                    const finishSelect = document.getElementById('sticker-finish');
+                    const currentFinish = finishSelect.value;
+                    finishSelect.innerHTML = `
+                        <option value="none">${i18n[currentLang].finish_none}</option>
+                        <option value="lam">${i18n[currentLang].finish_lam}</option>
+                        <option value="app">${i18n[currentLang].finish_app}</option>
+                        <option value="lam_app">${i18n[currentLang].finish_lam_app}</option>
+                    `;
+                    if (currentFinish) finishSelect.value = currentFinish;
+                }
+            } else if (method === 'banner') {
+                if (bannerSec) {
+                    bannerSec.classList.remove('hidden');
+                }
+            }
+
+            // Update garment list and secondary service options
+            updateGarmentOptions();
+            updateSecondaryServiceOptions();
+
+            // Check if design is complete for progressive reveal
+            checkDesignProgress();
+        }
+        function calculateTotal() {
+            const newCurrency = document.getElementById('currency-select').value;
+            if (newCurrency !== currentCurrency) {
+                currentCurrency = newCurrency;
+                renderSublimationStyles();
+                updateGarmentOptions(); // Refresh garment pricing
+                updateDropdownOptions(); // Refresh dropdown options with new currency
+            } else {
+                currentCurrency = newCurrency;
+            }
+
+            const totalQty = parseInt(document.getElementById('total-quantity').value) || 0;
+            const method = document.getElementById('method').value;
+            const category = document.getElementById('category').value;
+
+            // Don't calculate if no method selected yet
+            if (!method) return;
+
+            // Get all selected garments and their quantities
+            const garmentQtyInputs = document.querySelectorAll('[id^="garment-qty-"]');
+            let grandTotal = 0;
+            let garmentBreakdown = [];
+
+            // Handle Items category differently (no garment selection)
+            if (category === 'items' && totalQty > 0) {
+                // Calculate based on service method and finishing options
+                let primaryServiceCost = 0;
+                let finishingCost = 0;
+
+                if (method === 'embroidery') {
+                    const width = parseFloat(document.getElementById('emb-width').value) || 0;
+                    const height = parseFloat(document.getElementById('emb-height').value) || 0;
+                    const unit = document.getElementById('emb-unit').value || 'cm';
+                    const target = 'patch'; // Always patch for items category
+                    const backing = document.getElementById('finish-emb-backing').value || 'none';
+                    const border = document.getElementById('finish-emb-border').value || 'merrowed';
+                    
+                    primaryServiceCost = calculateServiceCost('embroidery', { width, height, unit, target, patchOption: backing }, totalQty, currentCurrency);
+                    
+                    // Add border cost
+                    if (border === 'laser-cut') {
+                        finishingCost += totalQty * (currentCurrency === 'JPY' ? 50 : 0.50);
+                    }
+                } else if (method === 'uv') {
+                    const coating = document.getElementById('finish-uv-coating').value || 'none';
+                    primaryServiceCost = calculateServiceCost('uv', {}, totalQty, currentCurrency);
+                    
+                    if (coating !== 'none') {
+                        finishingCost += totalQty * (currentCurrency === 'JPY' ? 200 : 2.00);
+                    }
+                } else if (method === 'sticker') {
+                    const shape = document.getElementById('sticker-shape').value;
+                    const unit = document.getElementById('sticker-unit').value || 'cm';
+                    const finishId = document.getElementById('sticker-finish').value;
+                    
+                    let maxDim = 0;
+                    if (shape === 'circle') {
+                        maxDim = parseFloat(document.getElementById('sticker-diameter').value) || 0;
+                    } else {
+                        const w = parseFloat(document.getElementById('sticker-width').value) || 0;
+                        const h = parseFloat(document.getElementById('sticker-height').value) || 0;
+                        maxDim = Math.max(w, h);
+                    }
+                    
+                    let sizeId = null;
+                    if (unit === 'cm') {
+                        if (maxDim > 0 && maxDim <= 10) sizeId = 's1';
+                        else if (maxDim <= 15) sizeId = 's2';
+                        else if (maxDim <= 20) sizeId = 's3';
+                    } else { // inch
+                        if (maxDim > 0 && maxDim <= 4) sizeId = 's1';
+                        else if (maxDim <= 6) sizeId = 's2';
+                        else if (maxDim <= 8) sizeId = 's3';
+                    }
+                    
+                    if (sizeId) {
+                        primaryServiceCost = calculateServiceCost('sticker', { sizeId, finishId }, totalQty, currentCurrency);
+                    }
+                } else if (method === 'banner') {
+                    // Get banner dimensions and base color
+                    const widthCm = parseFloat(document.getElementById('banner-width').value) || 0;
+                    const lengthCm = parseFloat(document.getElementById('banner-length').value) || 0;
+                    const baseColor = document.getElementById('banner-base-color').value;
+                    
+                    if (widthCm > 0 && lengthCm > 0 && baseColor) {
+                        // Get base price (function handles cm to m conversion)
+                        const basePrice = getBannerPrice(widthCm, lengthCm, baseColor, currentCurrency);
+                        
+                        if (basePrice !== null) {
+                            primaryServiceCost = basePrice * totalQty;
+                            
+                            // Add finishing options
+                            const isTwill = document.getElementById('banner-twill').checked;
+                            const isExtraThick = document.getElementById('banner-extra-thick').checked;
+                            const isDoubleSided = document.getElementById('banner-double-sided').checked;
+                            
+                            if (isTwill) {
+                                finishingCost += (currentCurrency === 'JPY' ? 500 : 5.00) * totalQty;
+                            }
+                            if (isExtraThick) {
+                                finishingCost += (currentCurrency === 'JPY' ? 1000 : 10.00) * totalQty;
+                            }
+                            if (isDoubleSided) {
+                                finishingCost += (currentCurrency === 'JPY' ? 2000 : 20.00) * totalQty;
+                            }
+                        }
+                    }
+                } else if (method === 'flag') {
+                    // Flag finishing options to be added later
+                    primaryServiceCost = calculateServiceCost('flag', {}, totalQty, currentCurrency);
+                }
+
+                grandTotal = primaryServiceCost + finishingCost;
+                
+                // Create breakdown for items
+                const currencySymbol = currentCurrency === 'JPY' ? '¥' : '$';
+                const unitLabel = currentLang === 'ja' ? '枚' : 'pc';
+                const serviceLabel = serviceOptions.find(s => s.id === method);
+                const serviceName = serviceLabel ? (currentLang === 'ja' ? serviceLabel.ja : serviceLabel.en) : method;
+                
+                const unitPrice = grandTotal / totalQty;
+                garmentBreakdown.push({
+                    name: serviceName,
+                    qty: totalQty,
+                    unitPrice: unitPrice,
+                    total: grandTotal
+                });
+                
+                // Continue to display section below...
+            } else if (category === 'garment') {
+                // Original garment logic follows...
+
+            garmentQtyInputs.forEach(input => {
+                const qty = parseInt(input.value) || 0;
+                if (qty > 0) {
+                    const garmentName = input.dataset.garmentName;
+                    const garmentPrice = currentCurrency === 'JPY'
+                        ? parseFloat(input.dataset.priceJp)
+                        : parseFloat(input.dataset.priceUs);
+                    const silkUpcharge = currentCurrency === 'JPY'
+                        ? parseFloat(input.dataset.silkUpchargeJp) || 0
+                        : parseFloat(input.dataset.silkUpchargeUs) || 0;
+
+                    // Calculate primary service cost
+                    let primaryServiceCost = 0;
+                    if (method === 'silk') {
+                        const colors = parseInt(document.getElementById('colors').value) || 1;
+                        primaryServiceCost = calculateServiceCost('silk', { colors }, totalQty, currentCurrency);
+                    } else if (method === 'dtf') {
+                        const sizeId = document.getElementById('dtf-size').value || 'standard';
+                        const locations = parseInt(document.getElementById('dtf-locations').value) || 1;
+                        primaryServiceCost = calculateServiceCost('dtf', { sizeId, locations }, totalQty, currentCurrency);
+                    } else if (method === 'embroidery') {
+                        const width = parseFloat(document.getElementById('emb-width').value) || 0;
+                        const height = parseFloat(document.getElementById('emb-height').value) || 0;
+                        const unit = document.getElementById('emb-unit').value || 'cm';
+                        const target = document.getElementById('emb-target').value || 'garment';
+                        const patchOption = document.getElementById('emb-patch-option').value || 'none';
+                        primaryServiceCost = calculateServiceCost('embroidery', { width, height, unit, target, patchOption }, totalQty, currentCurrency);
+                    } else if (method === 'sublimation') {
+                        const subContainer = document.getElementById('sublimation-styles');
+                        const styleId = subContainer ? subContainer.dataset.selectedStyleId : null;
+                        primaryServiceCost = calculateServiceCost('sublimation', { styleId }, totalQty, currentCurrency);
+                    } else if (method === 'sticker') {
+                        const shape = document.getElementById('sticker-shape').value;
+                        const unit = document.getElementById('sticker-unit').value || 'cm';
+                        const finishId = document.getElementById('sticker-finish').value;
+                        const errorMsg = document.getElementById('sticker-size-error');
+
+                        let maxDim = 0;
+                        if (shape === 'circle') {
+                            maxDim = parseFloat(document.getElementById('sticker-diameter').value) || 0;
+                        } else {
+                            const w = parseFloat(document.getElementById('sticker-width').value) || 0;
+                            const h = parseFloat(document.getElementById('sticker-height').value) || 0;
+                            maxDim = Math.max(w, h);
+                        }
+
+                        let sizeId = null;
+                        if (errorMsg) {
+                            errorMsg.classList.add('hidden');
+                            errorMsg.innerText = "";
+                        }
+
+                        let isValid = false;
+                        if (unit === 'cm') {
+                            if (maxDim > 0 && maxDim < 5) {
+                                if (errorMsg) {
+                                    errorMsg.innerText = (currentLang === 'ja') ? "最小サイズは5cmです" : "Minimum size is 5cm";
+                                    errorMsg.classList.remove('hidden');
+                                }
+                            } else if (maxDim > 20) {
+                                if (errorMsg) {
+                                    errorMsg.innerText = (currentLang === 'ja') ? "20cm以上は別途お見積りとなります" : "Please contact us for sizes over 20cm";
+                                    errorMsg.classList.remove('hidden');
+                                }
+                            } else if (maxDim > 0) {
+                                if (maxDim <= 10) sizeId = 's1';
+                                else if (maxDim <= 15) sizeId = 's2';
+                                else if (maxDim <= 20) sizeId = 's3';
+                                isValid = true;
+                            }
+                        } else { // inch
+                            if (maxDim > 0 && maxDim < 2) {
+                                if (errorMsg) {
+                                    errorMsg.innerText = (currentLang === 'ja') ? "最小サイズは2inchです" : "Minimum size is 2 inches";
+                                    errorMsg.classList.remove('hidden');
+                                }
+                            } else if (maxDim > 8) {
+                                if (errorMsg) {
+                                    errorMsg.innerText = (currentLang === 'ja') ? "8inch以上は別途お見積りとなります" : "Please contact us for sizes over 8 inches";
+                                    errorMsg.classList.remove('hidden');
+                                }
+                            } else if (maxDim > 0) {
+                                if (maxDim <= 4) sizeId = 's1';
+                                else if (maxDim <= 6) sizeId = 's2';
+                                else if (maxDim <= 8) sizeId = 's3';
+                                isValid = true;
+                            }
+                        }
+
+                        if (isValid && sizeId) {
+                            primaryServiceCost = calculateServiceCost('sticker', { sizeId, finishId }, totalQty, currentCurrency);
+                        } else {
+                            primaryServiceCost = 0;
+                        }
+                    } else {
+                        primaryServiceCost = calculateServiceCost(method, {}, totalQty, currentCurrency);
+                    }
+
+                    // Calculate secondary service cost if enabled
+                    let secondaryServiceCost = 0;
+                    const addSecondary = document.getElementById('add-secondary-service');
+                    if (addSecondary && addSecondary.checked) {
+                        const secondaryMethod = document.getElementById('secondary-method').value;
+                        if (secondaryMethod === 'silk') {
+                            const colors = parseInt(document.getElementById('secondary-colors').value) || 1;
+                            secondaryServiceCost = calculateServiceCost('silk', { colors }, totalQty, currentCurrency);
+                        } else if (secondaryMethod === 'dtf') {
+                            const sizeId = document.getElementById('secondary-dtf-size').value || 'standard';
+                            const locations = parseInt(document.getElementById('secondary-dtf-locations').value) || 1;
+                            secondaryServiceCost = calculateServiceCost('dtf', { sizeId, locations }, totalQty, currentCurrency);
+                        } else if (secondaryMethod === 'embroidery') {
+                            const width = parseFloat(document.getElementById('secondary-emb-width').value) || 0;
+                            const height = parseFloat(document.getElementById('secondary-emb-height').value) || 0;
+                            const unit = document.getElementById('secondary-emb-unit').value || 'cm';
+                            const target = document.getElementById('secondary-emb-target').value || 'garment';
+                            secondaryServiceCost = calculateServiceCost('embroidery', { width, height, unit, target, patchOption: 'none' }, totalQty, currentCurrency);
+                        }
+                    }
+
+                    // Calculate per-garment breakdown
+                    const primaryPerUnit = totalQty > 0 ? primaryServiceCost / totalQty : 0;
+                    const secondaryPerUnit = totalQty > 0 ? secondaryServiceCost / totalQty : 0;
+
+                    let totalPerUnit;
+                    if (method === 'silk') {
+                        // Silk screen matrix already includes basic garment, only add upcharge for premium garments
+                        totalPerUnit = primaryPerUnit + silkUpcharge + secondaryPerUnit;
+                    } else {
+                        // Other services: add full garment price
+                        totalPerUnit = garmentPrice + primaryPerUnit + secondaryPerUnit;
+                    }
+
+                    const garmentTotal = totalPerUnit * qty;
+
+                    garmentBreakdown.push({
+                        name: garmentName,
+                        qty: qty,
+                        unitPrice: totalPerUnit,
+                        total: garmentTotal
+                    });
+
+                    grandTotal += garmentTotal;
+                }
+            });
+            } // End of garment category
+
+            // Display results
+            const totalEl = document.getElementById('total-price');
+            const itemBreakdownEl = document.getElementById('item-breakdown');
+            const designFeeNoteEl = document.getElementById('design-fee-note');
+
+            const currencySymbol = currentCurrency === 'JPY' ? '¥' : '$';
+            const unitLabel = currentLang === 'ja' ? '枚' : 'pc';
+
+            // Populate item breakdown
+            itemBreakdownEl.innerHTML = '';
+            if (garmentBreakdown.length > 0) {
+                garmentBreakdown.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex justify-between items-start text-sm';
+
+                    const pricePerUnit = currentCurrency === 'JPY'
+                        ? currencySymbol + Math.floor(item.unitPrice).toLocaleString()
+                        : currencySymbol + item.unitPrice.toFixed(2);
+
+                    itemDiv.innerHTML = `
+                    <div class="flex-1">
+                        <div class="text-gray-200">${item.name}</div>
+                        <div class="text-xs text-gray-400">${item.qty} ${unitLabel} × ${pricePerUnit}</div>
+                    </div>
+                    <div class="text-right text-gray-200 font-medium">
+                        ${currentCurrency === 'JPY' ? currencySymbol + Math.floor(item.total).toLocaleString() : currencySymbol + item.total.toFixed(2)}
+                    </div>
+                `;
+                    itemBreakdownEl.appendChild(itemDiv);
+                });
+            }
+
+            // Display total
+            if (currentCurrency === 'JPY') {
+                totalEl.innerText = currencySymbol + Math.floor(grandTotal).toLocaleString();
+            } else {
+                totalEl.innerText = currencySymbol + grandTotal.toFixed(2);
+            }
+
+            designFeeNoteEl.innerText = '';
+
+            document.getElementById('hidden-total').value = totalEl.innerText;
+            document.getElementById('hidden-currency').value = currentCurrency;
+        }
+        function handleSubmit(e) {
+            submitted = true;
+        }
+        function showSuccessMessage() {
+            document.getElementById('success-modal').classList.remove('hidden');
+            document.getElementById('order-form').reset();
+            submitted = false;
+            calculateTotal();
+        }
+        function closeModal() {
+            document.getElementById('success-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

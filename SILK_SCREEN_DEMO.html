@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silk Screen Flow Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body { font-family: "Helvetica Neue", Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-8">
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white p-8 rounded-lg shadow-lg mb-6">
+        <h1 class="text-3xl font-bold mb-4 text-blue-600">🎨 Silk Screen Order Flow - Visual Guide</h1>
+        <p class="text-gray-600 mb-4">This demonstrates the new location-first flow for silk screen printing.</p>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500 mb-6">
+        <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+            <span>デザイン情報 / Design Details</span>
+        </h2>
+        
+        <p class="text-sm text-gray-600 mb-4">プリント位置を選択して、各位置の色数を指定してください<br>Select print locations and specify colors for each location</p>
+        
+        <div class="space-y-3 mb-3">
+            <!-- Example Location 1 -->
+            <div class="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                <div class="flex gap-3 items-start">
+                    <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">プリント位置 / Print Location</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm">
+                                <option value="">位置を選択 / Select location</option>
+                                <option value="left-chest" selected>左胸 / Left Chest</option>
+                                <option value="right-chest">右胸 / Right Chest</option>
+                                <option value="front-overall">全面 / Front Overall</option>
+                                <option value="back-overall">背面全体 / Back Overall</option>
+                                <option value="left-sleeve">左袖 / Left Sleeve</option>
+                                <option value="right-sleeve">右袖 / Right Sleeve</option>
+                                <option value="back-neck">バックネック / Back Neck</option>
+                                <option value="undecided">未定（色数のみ）/ Undecided (Colors only)</option>
+                                <option value="other">その他（カスタム）/ Other (Custom)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">色数 / Colors</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm bg-yellow-50">
+                                <option value="1">1</option>
+                                <option value="2" selected>2</option>
+                                <option value="3">3</option>
+                                <option value="4">4+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="mt-6 text-red-500 hover:text-red-700 transition">
+                        <span class="material-icons text-xl">delete_outline</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Example Location 2 -->
+            <div class="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                <div class="flex gap-3 items-start">
+                    <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">プリント位置 / Print Location</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm">
+                                <option value="">位置を選択 / Select location</option>
+                                <option value="left-chest">左胸 / Left Chest</option>
+                                <option value="right-chest">右胸 / Right Chest</option>
+                                <option value="front-overall" selected>全面 / Front Overall</option>
+                                <option value="back-overall">背面全体 / Back Overall</option>
+                                <option value="left-sleeve">左袖 / Left Sleeve</option>
+                                <option value="right-sleeve">右袖 / Right Sleeve</option>
+                                <option value="back-neck">バックネック / Back Neck</option>
+                                <option value="undecided">未定（色数のみ）/ Undecided (Colors only)</option>
+                                <option value="other">その他（カスタム）/ Other (Custom)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">色数 / Colors</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm bg-yellow-50">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3" selected>3</option>
+                                <option value="4">4+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="mt-6 text-red-500 hover:text-red-700 transition">
+                        <span class="material-icons text-xl">delete_outline</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Example Location 3 - "Other" with text input -->
+            <div class="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                <div class="flex gap-3 items-start">
+                    <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">プリント位置 / Print Location</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm">
+                                <option value="">位置を選択 / Select location</option>
+                                <option value="left-chest">左胸 / Left Chest</option>
+                                <option value="right-chest">右胸 / Right Chest</option>
+                                <option value="front-overall">全面 / Front Overall</option>
+                                <option value="back-overall">背面全体 / Back Overall</option>
+                                <option value="left-sleeve">左袖 / Left Sleeve</option>
+                                <option value="right-sleeve">右袖 / Right Sleeve</option>
+                                <option value="back-neck">バックネック / Back Neck</option>
+                                <option value="undecided">未定（色数のみ）/ Undecided (Colors only)</option>
+                                <option value="other" selected>その他（カスタム）/ Other (Custom)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">色数 / Colors</label>
+                            <select class="w-full border-gray-300 border rounded-md p-2 text-sm bg-yellow-50">
+                                <option value="1" selected>1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4+</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" class="mt-6 text-red-500 hover:text-red-700 transition">
+                        <span class="material-icons text-xl">delete_outline</span>
+                    </button>
+                </div>
+                <div class="mt-3">
+                    <input type="text" class="w-full border-gray-300 border rounded-md p-2 text-sm" placeholder="位置を入力してください / Enter location" value="Inside collar">
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="w-full border-2 border-dashed border-gray-300 rounded-lg p-3 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition flex items-center justify-center gap-2">
+            <span class="material-icons text-xl">add_circle_outline</span>
+            <span>位置を追加 / Add Location</span>
+        </button>
+        
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="text-xs font-semibold text-blue-800 mb-2">デザイン概要 / Design Summary</div>
+            <div class="text-sm text-blue-900 space-y-1">
+                <div>• 左胸 / Left Chest: 2色 / 2 colors</div>
+                <div>• 全面 / Front Overall: 3色 / 3 colors</div>
+                <div>• Inside collar: 1色 / 1 color</div>
+            </div>
+        </div>
+        
+        <p class="text-xs text-gray-500 mt-2">※データ確認後に確定します / *Verified after data check</p>
+    </div>
+
+    <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-bold mb-3">✨ Key Features</h2>
+        <ul class="space-y-2">
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Location-first approach:</strong> Select location, then specify colors for each
+                </div>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Multiple locations:</strong> Add as many locations as needed
+                </div>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Undecided option:</strong> Specify colors without committing to a location
+                </div>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Custom locations:</strong> "Other" option with text input for special requests
+                </div>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Real-time summary:</strong> See all selections at a glance
+                </div>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="material-icons text-yellow-300">check_circle</span>
+                <div>
+                    <strong>Bilingual:</strong> Full Japanese and English support
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div class="mt-6 bg-gray-800 text-white p-6 rounded-lg">
+        <h3 class="text-lg font-bold mb-3">📝 Example Usage Scenarios</h3>
+        <div class="space-y-4">
+            <div class="border-l-4 border-green-400 pl-4">
+                <h4 class="font-bold text-green-400 mb-1">Simple T-shirt</h4>
+                <p class="text-sm">• Front Overall: 2 colors<br>• Back Neck: 1 color</p>
+            </div>
+            <div class="border-l-4 border-blue-400 pl-4">
+                <h4 class="font-bold text-blue-400 mb-1">Team Uniform</h4>
+                <p class="text-sm">• Left Chest (logo): 3 colors<br>• Back Overall (number): 1 color<br>• Right Sleeve (flag): 4+ colors</p>
+            </div>
+            <div class="border-l-4 border-purple-400 pl-4">
+                <h4 class="font-bold text-purple-400 mb-1">Still Planning</h4>
+                <p class="text-sm">• Undecided: 2 colors<br>(Customer will decide location later)</p>
+            </div>
+            <div class="border-l-4 border-yellow-400 pl-4">
+                <h4 class="font-bold text-yellow-400 mb-1">Special Request</h4>
+                <p class="text-sm">• Other "Inside collar": 1 color<br>• Front Overall: 3 colors</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

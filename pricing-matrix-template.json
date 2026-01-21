@@ -1,0 +1,118 @@
+{
+  "currency": "USD",
+  "qtyTiers": [
+    {
+      "min": 12,
+      "max": 23,
+      "label": "12-23"
+    },
+    {
+      "min": 24,
+      "max": 47,
+      "label": "24-47"
+    },
+    {
+      "min": 48,
+      "max": 71,
+      "label": "48-71"
+    },
+    {
+      "min": 72,
+      "label": "72+"
+    }
+  ],
+  "silkScreen": [
+    {
+      "garmentStyle": "STYLE_CODE",
+      "notes": "e.g. 18000 Gildan Hoodie",
+      "colors": [
+        {
+          "colorCount": 1,
+          "unitPrices": {
+            "12-23": 7.25,
+            "24-47": 6.25,
+            "48-71": 5.95,
+            "72+": 5.25
+          }
+        },
+        {
+          "colorCount": 2,
+          "unitPrices": {
+            "12-23": 8.00,
+            "24-47": 7.00,
+            "48-71": 6.50,
+            "72+": 6.00
+          }
+        }
+      ]
+    }
+  ],
+  "dtf": [
+    {
+      "garmentStyle": "STYLE_CODE",
+      "sizeBuckets": [
+        {
+          "sizeLabel": "Left Chest",
+          "maxWidthIn": 5,
+          "maxHeightIn": 5,
+          "unitPrices": {
+            "12-23": 6.25,
+            "24-47": 5.75,
+            "48-71": 5.25,
+            "72+": 4.75
+          }
+        },
+        {
+          "sizeLabel": "Full Front",
+          "maxWidthIn": 12,
+          "maxHeightIn": 15,
+          "unitPrices": {
+            "12-23": 9.50,
+            "24-47": 8.75,
+            "48-71": 8.00,
+            "72+": 7.25
+          }
+        }
+      ]
+    }
+  ],
+  "embroidery": [
+    {
+      "garmentStyle": "STYLE_CODE",
+      "sizeBuckets": [
+        {
+          "sizeLabel": "Under 5k stitches",
+          "maxStitchCount": 5000,
+          "unitPrices": {
+            "12-23": 7.00,
+            "24-47": 6.50,
+            "48-71": 6.00,
+            "72+": 5.50
+          }
+        },
+        {
+          "sizeLabel": "5k-10k stitches",
+          "maxStitchCount": 10000,
+          "unitPrices": {
+            "12-23": 8.50,
+            "24-47": 8.00,
+            "48-71": 7.25,
+            "72+": 6.75
+          }
+        }
+      ]
+    }
+  ],
+  "sublimation": [
+    {
+      "styleNumber": "STYLE_CODE",
+      "unitPrices": {
+        "12-23": 18.00,
+        "24-47": 17.00,
+        "48-71": 16.00,
+        "72+": 15.00
+      }
+    }
+  ]
+}
+
